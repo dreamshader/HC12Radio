@@ -413,12 +413,22 @@ printf("response >%s\n", _responseBuffer);
  * return E_OK on succes, otherwise an error code
  ------------------------------------------------------------------------------
 */
-int hc12Radio::connect( void )
+int hc12Radio::connect( struct _hc12_serial_param *pParam )
 {
     int retVal;
 
     if( _connection != NULL )
     {
+        if( pParam != NULL )
+        {
+            _moduleParam.serialParam.device = strdup( pParam->device );
+            _moduleParam.serialParam.baud = pParam->baud;
+            _moduleParam.serialParam.databit = pParam->databit;
+            _moduleParam.serialParam.parity = pParam->parity;
+            _moduleParam.serialParam.stopbits = pParam->stopbits;
+            _moduleParam.serialParam.handshake = pParam->handshake;
+        }
+
         retVal = _connection->ser_open( _moduleParam.serialParam.device,
                                         _moduleParam.serialParam.baud,
                                         _moduleParam.serialParam.databit,
@@ -445,6 +455,8 @@ int hc12Radio::connect( void )
 int hc12Radio::disconnect( void )
 {
     int retVal;
+
+
 
     if( _connection != NULL )
     {
@@ -475,9 +487,15 @@ int hc12Radio::enterCommandMode( void )
 
 printf("enter Command mode\n");
 
-    _currOpMode = HC12_OP_CMD_MODE;
+    if( (retVal = _status) == HC12_ERR_OK )
+    {
+        if( _moduleParam.setPin != HC12_NULLPIN )
+        {
+            gpioWrite(_moduleParam.setPin, HC12_SETPIN_CMD_MODE);
+        }
 
-// HC12_SETPIN_CMD_MODE
+        _currOpMode = HC12_OP_CMD_MODE;
+    }
 
     return( retVal );
 }
@@ -497,10 +515,15 @@ int hc12Radio::leaveCommandMode( void )
     int retVal = HC12_ERR_OK;
 
 printf("leave Command mode\n");
+    if( (retVal = _status) == HC12_ERR_OK )
+    {
+        if( _moduleParam.setPin != HC12_NULLPIN )
+        {
+            gpioWrite(_moduleParam.setPin, HC12_SETPIN_TT_MODE);
+        }
 
-    _currOpMode = HC12_OP_TT_MODE;
-
-// HC12_SETPIN_TT_MODE
+        _currOpMode = HC12_OP_TT_MODE;
+    }
 
     return( retVal );
 }
@@ -516,8 +539,35 @@ printf("leave Command mode\n");
 */
 void hc12Radio::init( void )
 {
-    _moduleParam.setPin = HC12_DEFAULT_SET_PIN;
-    _moduleParam.powerPin = HC12_DEFAULT_POW_PIN;
+
+#if defined(RASPBERRY)
+    if( _moduleParam.setPin != HC12_NULLPIN ||
+        _moduleParam.powerPin != HC12_NULLPIN )
+    {
+        if (gpioInitialise() < 0)
+        {
+            _status = HC12_ERR_INIT_PIGPIO;
+fprintf(stderr, "ERR init pigpio\n");
+        }
+        else
+        {
+            _status = HC12_ERR_OK;
+
+            if( _moduleParam.setPin != HC12_NULLPIN )
+            {
+                gpioSetMode(_moduleParam.setPin, PI_OUTPUT);
+                gpioWrite(_moduleParam.setPin, HC12_SETPIN_TT_MODE);
+            }
+
+            if( _moduleParam.powerPin != HC12_NULLPIN )
+            {
+                gpioSetMode(_moduleParam.powerPin, PI_OUTPUT);
+                gpioWrite(_moduleParam.powerPin, HC12_POWERPIN_ON);
+            }
+        }
+    }
+#endif // defined(RASPBERRY)
+
     _moduleParam.comChannel = HC12_DEFAULT_CHANNEL;
     _moduleParam.ttMode = HC12_DEFAULT_TTMODE;
     _moduleParam.power = HC12_DEFAULT_POWER;
@@ -562,7 +612,6 @@ int hc12Radio::test( void )
 
     if( _currOpMode == HC12_OP_CMD_MODE )
     {
-
         sprintf( _commandBuffer, HC12_CMD_TEST );
 
         if( (retVal = sendRequest()) == E_OK )

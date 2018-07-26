@@ -51,6 +51,9 @@
     #include <netinet/in.h>
     #include <netdb.h> 
     #include <getopt.h>
+#if defined(RASPBERRY)
+    #include <pigpio.h>
+#endif // defined(RASPBERRY)
 
 #endif // ARDUINO
 
@@ -59,6 +62,14 @@ extern "C" {
 #endif
  
 using namespace std;
+
+#ifndef HIGH
+#define HIGH                        1
+#endif
+#
+#ifndef LOW
+#define LOW                         0
+#endif
 
 #define HC12_ERR_OK                 0
 #define HC12_ERR_FAIL              -1
@@ -75,6 +86,8 @@ using namespace std;
 #define HC12_ERR_TTMODE           -15
 #define HC12_ERR_CHANNEL          -16
 #define HC12_ERR_POWER            -17
+
+#define HC12_ERR_INIT_PIGPIO      -30
 
 #if defined(ARDUINO)
     #define SEND_BUFFER_SIZE       16
@@ -125,6 +138,9 @@ using namespace std;
 #define HC12_SETPIN_CMD_MODE       LOW
 #define HC12_SETPIN_TT_MODE        HIGH
 
+#define HC12_POWERPIN_ON           HIGH
+#define HC12_POWERPIN_OFF          LOW
+
 #define HC12_MIN_CHANNEL            1
 #define HC12_MAX_CHANNEL          127
 #define HC12_FREQ_MIN_CHANNEL  433400
@@ -152,6 +168,7 @@ using namespace std;
 
 #define HC12_DEFAULT_SET_PIN       HC12_NULLPIN
 #define HC12_DEFAULT_POW_PIN       HC12_NULLPIN
+
 #define HC12_DEFAULT_CHANNEL       HC12_MIN_CHANNEL
 #define HC12_DEFAULT_TTMODE        HC12_TTMODE_FU3
 #define HC12_DEFAULT_POWER         HC12_POWER_20_DBM
@@ -306,6 +323,7 @@ class hc12Radio {
 // SERIAL_5O1 _6O1 _7O1 _8O1
 // SERIAL_5O2 _6O2 _7O2 _8O2
 
+    int                _status;
 #if defined(ARDUINO)
     Stream*            _ioStream;
     HardwareSerial*    _hwPort;
@@ -329,7 +347,14 @@ class hc12Radio {
     hc12Radio(int setPin, int powerPin, HardwareSerial* port = NULL);
     hc12Radio(int setPin, int powerPin, SoftwareSerial* port = NULL);
 #else // NOT on Arduino platform
-    hc12Radio(void) {  _connection = new serialConnection(); init(); };
+    hc12Radio(int setPin = HC12_DEFAULT_SET_PIN,
+              int powerPin = HC12_DEFAULT_POW_PIN) 
+    {  
+        _connection = new serialConnection(); 
+        _moduleParam.setPin = setPin;
+        _moduleParam.powerPin = powerPin;
+        init();
+    };
 #endif // defined(ARDUINO)
 
     void dump( int what );
@@ -337,7 +362,7 @@ class hc12Radio {
     int flushSerial( void );
     int getResponse( void );
     int sendRequest( void );
-    int connect( void );
+    int connect( struct _hc12_serial_param *pParam );
     int disconnect( void );
 
     void init( void );

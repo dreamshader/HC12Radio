@@ -39,6 +39,7 @@ CXXDEBUG = -g
 #
 CXXFLAGS = -Wall -DHC12SERIAL
 CXXLIBSOFLAGS = -fPIC -shared 
+CXXRASPBERRY = -DRASPBERRY
 #
 SOURCEDIR = ../src
 LIBSRC = $(SOURCEDIR)/serialConnection.cpp $(SOURCEDIR)/hc12Radio.cpp
@@ -49,18 +50,19 @@ LIBOBJ = serialConnection.o hc12Radio.o
 SOLIBNAME = libhc12Radio.so
 STATLIBNAME = libhc12Radio.a
 #
+PIGPIO = -lpigpio -lrt
 #
 all: lib-static lib-shared
 
 lib-static:
-	$(CXX) $(CXXFLAGS) -c $(LIBSRC)
+	$(CXX) $(CXXFLAGS) $(CXXRASPBERRY) -c $(LIBSRC)
 
 lib-shared:
-	$(CXX) $(CXXFLAGS) $(CXXDEBUG) $(CXXLIBSOFLAGS) -c $(LIBSRC)
+	$(CXX) $(CXXFLAGS) $(CXXRASPBERRY) $(CXXDEBUG) $(CXXLIBSOFLAGS) -c $(LIBSRC)
 	$(CXX) -shared  -Wl,-soname,$(SOLIBNAME) -o $(SOLIBNAME) $(LIBOBJ)
 
 example: lib-static lib-shared
-	$(CXX) -o $(EXAMPLNAME) $(CXXDEBUG) $(EXAMPLSRC) $(EXAMPLFLAGS)
+	$(CXX) -o $(EXAMPLNAME) $(CXXDEBUG) $(CXXRASPBERRY) $(EXAMPLSRC) $(EXAMPLFLAGS) $(PIGPIO)
 
 
 #g++ -fPIC -shared myclass.cc -o myclass.so

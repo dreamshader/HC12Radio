@@ -430,9 +430,12 @@ int main( int argc, char *argv[] )
     }
     else
     {
-        if( (pRadio = new hc12Radio()) != NULL )
+
+#define PIN_SET    17 // GPIO17 = pin #11
+
+        if( (pRadio = new hc12Radio(PIN_SET)) != NULL )
         {
-            if( (retVal = pRadio->connect()) != E_OK )
+            if( (retVal = pRadio->connect(&ctl_param)) != E_OK )
             {
                 fprintf(stderr, "[%d]Connect failed\n", retVal );
             }
@@ -441,7 +444,7 @@ int main( int argc, char *argv[] )
                 pRadio->flushSerial();
 
                 pRadio->enterCommandMode();
-
+sleep(1);
                 pRadio->test();
                 pRadio->getParam();
 
