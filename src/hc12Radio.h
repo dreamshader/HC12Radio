@@ -93,8 +93,10 @@ using namespace std;
     #define SEND_BUFFER_SIZE       16
     #define RESPONSE_BUFFER_SIZE   64
 #else // NOT on Arduino platform
-    #define SEND_BUFFER_SIZE      128
-    #define RESPONSE_BUFFER_SIZE  128
+//    #define SEND_BUFFER_SIZE      128
+//    #define RESPONSE_BUFFER_SIZE  128
+    #define SEND_BUFFER_SIZE       16
+    #define RESPONSE_BUFFER_SIZE   64
 #endif // defined(ARDUINO)
 
 #define HC12_INTERFACE_HW           2
@@ -359,8 +361,9 @@ class hc12Radio {
 
     void dump( int what );
 
-    int flushSerial( void );
     int getResponse( void );
+    int parseResponse( void );
+
     int sendRequest( void );
     int connect( struct _hc12_serial_param *pParam );
     int disconnect( void );

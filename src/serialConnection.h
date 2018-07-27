@@ -55,6 +55,7 @@ using namespace std;
 
 #define E_OK                       0
 #define E_FAIL                    -1
+#define E_BUFSPACE                -2
 
 #define E_PARAM_BAUDRATE         -10
 #define E_PARAM_DATABIT	         -11
@@ -95,10 +96,8 @@ using namespace std;
 // for usleep
 #define MICROSECONDS            1
 #define MILLISECONDS         1000
-#define MAX_FAIL_TRIES        500
 
-
-// #define SEND_BUFFER_SIZE    1024
+#define TIMEOUT_MS            200
 
 class serialConnection {
 
@@ -115,8 +114,6 @@ class serialConnection {
         int8_t         parity;
         int16_t        stopbits;
         int8_t         handshake;
-
-//     uint8_t _sendBuffer[SEND_BUFFER_SIZE];
 
     public:
         int            errorNum;
@@ -174,9 +171,12 @@ class serialConnection {
         int ser_open( void );
 
         int ser_close( void );
-        int ser_read( char* pBuffer, int bufLen );
+        int readBuffer( char* pBuffer, int bufLen );
         int ser_write( char* pBuffer, int wrLen );
+        int readline( char* pBuffer, int bufLen );
 
+        void flushOutput( void );
+        void flushInput( void );
 
 };
 

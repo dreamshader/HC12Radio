@@ -26,7 +26,7 @@
 #include "serialConnection.h"
 
 /* ----------------------------------------------------------------------------
- * bool isValidDevice( char* pDeviceName )
+ * bool serialConnection::isValidDevice( char* pDeviceName )
  *
  * Check device for presence and accessibilty
  * return true on succes, false otherwise
@@ -57,7 +57,7 @@ bool serialConnection::isValidDevice( char* pDeviceName )
 }
 
 /* ----------------------------------------------------------------------------
- * bool isValidBaud( unsigned int baud )
+ * bool serialConnection::isValidBaud( unsigned int baud )
  *
  * Check whether baudrate is valid
  * return true on succes, false otherwise
@@ -100,7 +100,7 @@ bool serialConnection::isValidBaud( uint32_t baud )
 }
 
 /* ----------------------------------------------------------------------------
- * bool isValidDatabits( short databits )
+ * bool serialConnection::isValidDatabits( short databits )
  *
  * Check whether databits are valid
  * return true on succes, false otherwise
@@ -128,7 +128,7 @@ bool serialConnection::isValidDatabits( int16_t databits )
 }
 
 /* ----------------------------------------------------------------------------
- * bool isValidParity( char parity )
+ * bool serialConnection::isValidParity( char parity )
  *
  * Check whether parity is valid
  * return true on succes, false otherwise
@@ -158,7 +158,7 @@ bool serialConnection::isValidParity( int8_t parity )
 }
 
 /* ----------------------------------------------------------------------------
- * bool isValidStopbits( short stopbits )
+ * bool serialConnection::isValidStopbits( short stopbits )
  *
  * Check whether stopbits are valid
  * return true on succes, false otherwise
@@ -184,7 +184,7 @@ bool serialConnection::isValidStopbits( int16_t stopbits )
 }
 
 /* ----------------------------------------------------------------------------
- * bool isValidHandshake( char handshake )
+ * bool serialConnection::isValidHandshake( char handshake )
  *
  * Check whether handshake is valid
  * return true on succes, false otherwise
@@ -212,8 +212,8 @@ bool serialConnection::isValidHandshake( int8_t handshake )
 }
 
 /* ----------------------------------------------------------------------------
- * int setup( char *devname, unsigned int baud, short databits,
- *            char parity, short stopbits, char handshake )
+ * int serialConnection::setup( char *devname, unsigned int baud, 
+ *          short databits, char parity, short stopbits, char handshake )
  *
  * set all connection parameters at once
  * returns E_OK on succes, otherwise an error number
@@ -414,8 +414,8 @@ int serialConnection::set_termios( void )
 }
 
 /* ----------------------------------------------------------------------------
- * int ser_open( char *devname, unsigned int baud, short databits,
- *               char parity, short stopbits, char handshake )
+ * int serialConnection::ser_open( char *devname, unsigned int baud, 
+ *           short databits, char parity, short stopbits, char handshake )
  *
  * open connection with given parameters
  * returns E_OK on succes, otherwise an error number
@@ -447,8 +447,8 @@ int serialConnection::ser_open( char *devname, uint32_t baud,
 }
 
 /* ----------------------------------------------------------------------------
- * int ser_open( char *devname, unsigned int baud, short databits,
- *               char parity, short stopbits, char handshake )
+ * int serialConnection::ser_open( char *devname, unsigned int baud, 
+ *          short databits, char parity, short stopbits, char handshake )
  *
  * open connection with given parameters
  * returns E_OK on succes, otherwise an error number
@@ -474,7 +474,7 @@ int serialConnection::ser_open( void )
 }
 
 /* ----------------------------------------------------------------------------
- * int ser_close( void )
+ * int serialConnection::ser_close( void )
  *
  * close current connection
  * returns E_OK on succes, otherwise an error number
@@ -498,16 +498,49 @@ int serialConnection::ser_close( void )
 }
 
 /* ----------------------------------------------------------------------------
- * int ser_read( char* pBuffer, int bufLen )
+ * void serialConnection::flushOutput( void )
+ *
+ * flush output queue
+ * returns nothing
+ ------------------------------------------------------------------------------
+*/
+void serialConnection::flushOutput( void )
+{
+    tcflush( this->dev_fd, TCOFLUSH );
+}
+
+/* ----------------------------------------------------------------------------
+ * void serialConnection::flushInput( void )
+ *
+ * flush input queue
+ * returns nothing
+ ------------------------------------------------------------------------------
+*/
+void serialConnection::flushInput( void )
+{
+    tcflush( this->dev_fd, TCIFLUSH );
+}
+
+/* ----------------------------------------------------------------------------
+ * int serialConnection::readline( char* pBuffer, int bufLen )
  *
  * try to read from current connection
  * read up to bufLen bytes into location where pBuffer points to.
  * returns amount of bytes read on succes, otherwise an error number
  ------------------------------------------------------------------------------
 */
-int serialConnection::ser_read( char* pBuffer, int bufLen )
+int serialConnection::readline( char* pBuffer, int bufLen )
 {
     int retVal = E_OK;
+    char c;
+    int ncount;
+    int idx = 0;
+    bool endLoop;
+    bool retry;
+    struct timespec startTimeout;
+    struct timespec current;
+    clockid_t clk_id = CLOCK_MONOTONIC_COARSE;
+//    long nanoDiff;
 
     if( pBuffer != NULL )
     {
@@ -515,40 +548,78 @@ int serialConnection::ser_read( char* pBuffer, int bufLen )
         {
             if( bufLen > 0 )
             {
-                    char c = 0;
-                    int idx = 0;
-                    int endOfData = 0;
-                    static int failtries;
 
-                    while( idx < bufLen && !endOfData )
+                    idx = 0;
+                    retry = false;
+                    endLoop = false;
+
+                    while( !endLoop )
                     {
-                        c = 0;
-
-                        if( (retVal = read( this->dev_fd, &c, 1 )) > 0  ||
-                             c != 0 )
+                        if( (ncount = read( this->dev_fd, &c, 1 )) > 0 )
                         {
-                            failtries = 0;
-                            pBuffer[idx++] = c;
-                            pBuffer[idx] = '\0';
+                            retry = false;
+                            if( (pBuffer[idx++] = c) == '\n' )
+                            {
+                                endLoop = true;
+                            }
+                           
+                            if( idx >= bufLen )
+                            {
+                                retVal = E_BUFSPACE;
+                                endLoop = true;
+                            }
                         }
                         else
                         {
-                            usleep(10 * MILLISECONDS);
-                            if( ++failtries > MAX_FAIL_TRIES )
+                            if( ncount < 0 && errno != EAGAIN )
                             {
-                                endOfData = 1;
-                                break;
+                                retVal = E_FAIL;
+                                endLoop = true;
+                                this->errorNum = errno;
                             }
+                            else
+                            {
+                                if( !retry )
+                                {
+                                    clock_gettime(clk_id, &startTimeout);
+                                    retry = true;
+                                }
+                                else
+                                {
+                                    clock_gettime(clk_id, &current);
+
+                                    if( current.tv_sec == startTimeout.tv_sec )
+                                    {
+                                        if( (current.tv_nsec - 
+                                                    startTimeout.tv_nsec) >=
+                                             (TIMEOUT_MS * 1000000) )
+                                        {
+                                            endLoop = true;
+                                            retVal = E_READ_TIMEOUT;
+fprintf(stderr, "timeout %d\n", __LINE__);
+                                        }
+                                    }
+// nano * 1000 = micro
+// micro * 1000 = milli
+
+                                    else
+                                    {
+                                        if( ((current.tv_nsec + 1000000) - 
+                                                    startTimeout.tv_nsec) >=
+                                             (TIMEOUT_MS * 1000000) )
+                                        {
+                                            endLoop = true;
+                                            retVal = E_READ_TIMEOUT;
+fprintf(stderr, "timeout %d\n", __LINE__);
+                                        }
+
+                                    }
+                                }
+                            }
+
                         }
                     }
-
-                    if( idx == 0 )
-                    {
-                        retVal = E_READ_TIMEOUT;
-sprintf(pBuffer, "read timeout\n");
-                    }
-
-                    this->errorNum = errno;
+                    pBuffer[idx] = '\0';
             }
             else
             {
@@ -571,7 +642,124 @@ sprintf(pBuffer, "read timeout\n");
 }
 
 /* ----------------------------------------------------------------------------
- * int ser_write( char* pBuffer, int bufLen )
+ * int serialConnection::readBuffer( char* pBuffer, int bufLen )
+ *
+ * try to read from current connection
+ * read up to bufLen bytes into location where pBuffer points to.
+ * returns amount of bytes read on succes, otherwise an error number
+ ------------------------------------------------------------------------------
+*/
+int serialConnection::readBuffer( char* pBuffer, int bufLen )
+{
+    int retVal = E_OK;
+    char c;
+    int ncount;
+    int idx = 0;
+    bool endLoop;
+    bool retry;
+    struct timespec startTimeout;
+    struct timespec current;
+    clockid_t clk_id = CLOCK_MONOTONIC_COARSE;
+//    long nanoDiff;
+
+    if( pBuffer != NULL )
+    {
+        if( this->dev_fd > 0 )
+        {
+            if( bufLen > 0 )
+            {
+
+                    idx = 0;
+                    retry = false;
+                    endLoop = false;
+
+                    while( !endLoop )
+                    {
+                        if( (ncount = read( this->dev_fd, &c, 1 )) > 0 )
+                        {
+                            retry = false;
+                            pBuffer[idx++] = c;
+                            if( idx >= bufLen )
+                            {
+                                retVal = E_BUFSPACE;
+                                endLoop = true;
+                            }
+
+                        }
+                        else
+                        {
+                            if( ncount < 0 && errno != EAGAIN )
+                            {
+                                retVal = E_FAIL;
+                                endLoop = true;
+                                this->errorNum = errno;
+                            }
+                            else
+                            {
+                                if( !retry )
+                                {
+                                    clock_gettime(clk_id, &startTimeout);
+                                    retry = true;
+                                }
+                                else
+                                {
+                                    clock_gettime(clk_id, &current);
+
+                                    if( current.tv_sec == startTimeout.tv_sec )
+                                    {
+                                        if( (current.tv_nsec - 
+                                                    startTimeout.tv_nsec) >=
+                                             (TIMEOUT_MS * 1000000) )
+                                        {
+                                            endLoop = true;
+                                            retVal = E_READ_TIMEOUT;
+fprintf(stderr, "timeout %d\n", __LINE__);
+                                        }
+                                    }
+// nano * 1000 = micro
+// micro * 1000 = milli
+
+                                    else
+                                    {
+                                        if( ((current.tv_nsec + 1000000) - 
+                                                    startTimeout.tv_nsec) >=
+                                             (TIMEOUT_MS * 1000000) )
+                                        {
+                                            endLoop = true;
+                                            retVal = E_READ_TIMEOUT;
+fprintf(stderr, "timeout %d\n", __LINE__);
+                                        }
+
+                                    }
+                                }
+                            }
+
+                        }
+                    }
+                    pBuffer[idx] = '\0';
+            }
+            else
+            {
+                retVal = E_PARAM_LENGTH;
+                sprintf(pBuffer, "FAIL %d (error %d)\n", __LINE__, retVal);
+            }
+        }
+        else
+        {
+            retVal = E_PARAM_NOFD;
+            sprintf(pBuffer, "FAIL %d (error %d)\n", __LINE__, retVal);
+        }
+    }
+    else
+    {
+        retVal = E_PARAM_NULL;
+    }
+
+    return( retVal );
+}
+
+/* ----------------------------------------------------------------------------
+ * int serialConnection::ser_write( char* pBuffer, int bufLen )
  *
  * try to write to current connection
  * write bufLen bytes from pBuffer to current connection.
@@ -591,6 +779,7 @@ int serialConnection::ser_write( char* pBuffer, int wrLen )
                 if( wrLen > 0 )
                 {
                     retVal = write( this->dev_fd, pBuffer, wrLen );
+                    tcflush( this->dev_fd, TCOFLUSH);
                     this->errorNum = errno;
                 }
             }

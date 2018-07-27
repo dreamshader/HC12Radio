@@ -316,31 +316,6 @@ void hc12Radio::dump( int what )
     }
 }
 
-/* 
- ------------------------------------------------------------------------------
- * int hc12Radio::flushSerial( void )
- *
- * read the response of the attached smart-TFT into _responseBuffer
- * returns the amount if characters read or an error code
- ------------------------------------------------------------------------------
-*/
-int hc12Radio::flushSerial( void )
-{
-    int retVal;
-
-    if( _connection != NULL )
-    {
-        retVal = _connection->ser_read( _responseBuffer,
-                                                 RESPONSE_BUFFER_SIZE-1 );
-    }
-    else
-    {
-        retVal = E_NULL_CONNECTION;
-    }
-
-    return( retVal );
-}
-
 #endif // defined(__linux__)
 
 /* 
@@ -357,8 +332,76 @@ int hc12Radio::getResponse( void )
 
     if( _connection != NULL )
     {
-        retVal = _connection->ser_read( _responseBuffer,
-                                                 RESPONSE_BUFFER_SIZE-1 );
+        memset( _responseBuffer, '\0', RESPONSE_BUFFER_SIZE );
+        retVal = _connection->readline( _responseBuffer,
+                                      RESPONSE_BUFFER_SIZE-1 );
+    }
+    else
+    {
+        retVal = E_NULL_CONNECTION;
+    }
+
+    return( retVal );
+}
+
+/* 
+ ------------------------------------------------------------------------------
+ * int hc12Radio::parseResponse( void )
+ *
+ * parse the response of the attached board
+ * returns parsing result
+ ------------------------------------------------------------------------------
+*/
+#define NO_MORE_DATA    22
+#define TRY_MORE_DATA   33
+
+int hc12Radio::parseResponse( void )
+{
+    int retVal = NO_MORE_DATA;
+    char *pResult;
+
+    if( _connection != NULL )
+    {
+        if( (pResult = strcasestr( _responseBuffer, "OK")) != NULL )
+        {
+            if(pResult[2] == '+' )
+            {
+                switch(pResult[3])
+                {
+                    case 'B':
+fprintf(stderr, "OK+B ...\n");
+                        break;
+                    case 'R':
+fprintf(stderr, "OK+R ...\n");
+                        break;
+                    case 'F':
+fprintf(stderr, "OK+F ...\n");
+                        break;
+                    case 'C':
+fprintf(stderr, "OK+C ...\n");
+                        break;
+                    default:
+                        break;
+                }
+                retVal = TRY_MORE_DATA;
+            }
+            else
+            {
+                // result of test command
+                retVal = NO_MORE_DATA;
+            }
+        }
+        else
+        {
+            do
+            {
+                retVal = _connection->readBuffer( _responseBuffer,
+                      RESPONSE_BUFFER_SIZE-1 );
+            } while( retVal == E_BUFSPACE || retVal > 0 );
+
+            retVal = NO_MORE_DATA;
+        }
+
     }
     else
     {
@@ -372,30 +415,53 @@ int hc12Radio::getResponse( void )
  ------------------------------------------------------------------------------
  * int hc12Radio::sendRequest( void )
  *
- * send the command buffer to the attached smart-TFT
+ * send the command buffer to the attached HC-12 board
  * returns the amount if characters written or an error code
  ------------------------------------------------------------------------------
 */
 int hc12Radio::sendRequest( void )
 {
     int retVal;
+    bool moreData;
 
 printf("command >%s", _commandBuffer);
 
     if( _connection != NULL )
     {
-        retVal = _connection->ser_write( _commandBuffer,
-                                                 strlen(_commandBuffer) );
+//        _connection->flushOutput();
+//        _connection->flushInput();
 
+        retVal = _connection->ser_write( _commandBuffer,
+                                          strlen(_commandBuffer) );
         if( retVal > 0 )
         {
-            memset( _responseBuffer, '\0', RESPONSE_BUFFER_SIZE );
-            _responseBuffer[0] = '\0';
+            moreData = true;
+            while(moreData)
+            {
+                retVal = getResponse();
 
-            usleep(100 * MILLISECONDS);
-            retVal = getResponse();
+fprintf(stderr, "RESPONSE: %s\n", _responseBuffer);
+
+                if(retVal == E_READ_TIMEOUT )
+                {
+                    moreData = false;
+                }
+                else
+                {
+                    if(retVal != E_BUFSPACE )
+                    {
+                        switch( retVal = parseResponse() )
+                        {
+                            case NO_MORE_DATA:
+                                moreData = false;
+                                break;
+                            case TRY_MORE_DATA:
+                                break;
+                        }
+                    }
+                }
+            }
         }
-printf("response >%s\n", _responseBuffer);
     }
     else
     {
@@ -492,6 +558,7 @@ printf("enter Command mode\n");
         if( _moduleParam.setPin != HC12_NULLPIN )
         {
             gpioWrite(_moduleParam.setPin, HC12_SETPIN_CMD_MODE);
+            usleep(60 * MILLISECONDS);
         }
 
         _currOpMode = HC12_OP_CMD_MODE;
@@ -520,6 +587,7 @@ printf("leave Command mode\n");
         if( _moduleParam.setPin != HC12_NULLPIN )
         {
             gpioWrite(_moduleParam.setPin, HC12_SETPIN_TT_MODE);
+            usleep(100 * MILLISECONDS);
         }
 
         _currOpMode = HC12_OP_TT_MODE;
@@ -626,6 +694,11 @@ int hc12Radio::test( void )
                 retVal = HC12_ERR_RESPONSE;
             }
         }
+//        else
+//        {
+//fprintf(stderr, "ERR send request failed [%d]\n", retVal);
+//        }
+
     }
     else
     {
@@ -1315,6 +1388,8 @@ int hc12Radio::getParam( void )
 {
     int retVal = HC12_ERR_OK;
     int sBaud, sChan, sPower, sTTMode;
+    char *pRespBegin;
+
 
     if( _currOpMode == HC12_OP_CMD_MODE )
     {
@@ -1322,20 +1397,25 @@ int hc12Radio::getParam( void )
 
         if( (retVal = sendRequest()) == E_OK )
         {
-            if( sscanf( _responseBuffer, HC12_RSP_GET_PARAM, &sBaud, 
+
+            if( (pRespBegin = strcasestr( _responseBuffer, "OK")) != NULL )
+            {
+//                if( sscanf( _responseBuffer, HC12_RSP_GET_PARAM, &sBaud, 
+                if( sscanf( pRespBegin, HC12_RSP_GET_PARAM, &sBaud, 
                         &sChan, &sPower, &sTTMode) == HC12_ARGS_RSP_GET_PARAM )
-            {
-                retVal = HC12_ERR_OK;
+                {
+                    retVal = HC12_ERR_OK;
 
-                _moduleParam.comChannel = sChan;
-                _moduleParam.ttMode = sTTMode;
-                _moduleParam.power = sPower;
+                    _moduleParam.comChannel = sChan;
+                    _moduleParam.ttMode = sTTMode;
+                    _moduleParam.power = sPower;
 
-                _moduleParam.serialParam.baud = sBaud;
-            }
-            else
-            {
-                retVal = HC12_ERR_ARGS;
+                    _moduleParam.serialParam.baud = sBaud;
+                }
+                else
+                {
+                    retVal = HC12_ERR_ARGS;
+                }
             }
         }
     }

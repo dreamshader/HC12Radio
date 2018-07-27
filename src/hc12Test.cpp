@@ -441,10 +441,8 @@ int main( int argc, char *argv[] )
             }
             else
             {
-                pRadio->flushSerial();
-
                 pRadio->enterCommandMode();
-sleep(1);
+
                 pRadio->test();
                 pRadio->getParam();
 
