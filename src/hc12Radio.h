@@ -90,13 +90,10 @@ using namespace std;
 #define HC12_ERR_INIT_PIGPIO      -30
 
 #if defined(ARDUINO)
-    #define SEND_BUFFER_SIZE       16
-    #define RESPONSE_BUFFER_SIZE   64
+    #define IO_BUFFER_SIZE         64
 #else // NOT on Arduino platform
-//    #define SEND_BUFFER_SIZE      128
-//    #define RESPONSE_BUFFER_SIZE  128
-    #define SEND_BUFFER_SIZE       16
-    #define RESPONSE_BUFFER_SIZE   64
+//    #define IO_BUFFER_SIZE        128
+    #define IO_BUFFER_SIZE         64
 #endif // defined(ARDUINO)
 
 #define HC12_INTERFACE_HW           2
@@ -188,57 +185,82 @@ using namespace std;
 #define HC12_DEFAULT_INTERFACE     HC12_INTERFACE_SW
 #define HC12_DEFAULT_OPMODE        HC12_OP_TT_MODE
 
+#define HC12_CMD_CODE_NULL         0
+#define HC12_CMD_CODE_TEST         20
 #define HC12_CMD_TEST              "AT\n"
 #define HC12_RSP_TEST              "OK"
 #define HC12_ARGS_RSP_TEST          0
+#define HC12_CMD_CODE_SET_DEFAULT  21
 #define HC12_CMD_SET_DEFAULT       "AT+DEFAULT\n"
 #define HC12_RSP_SET_DEFAULT       "OK+DEFAULT"
 #define HC12_ARGS_RSP_SET_DEFAULT   0
+#define HC12_CMD_CODE_SLEEP        22
 #define HC12_CMD_SLEEP             "AT+SLEEP\n"
 #define HC12_RSP_SLEEP             "OK+SLEEP"
 #define HC12_ARGS_RSP_SLEEP         0
+#define HC12_CMD_CODE_UPDATE       23
 #define HC12_CMD_UPDATE            "AT+UPDATE\n"
 #define HC12_RSP_UPDATE            ""
 #define HC12_ARGS_RSP_UPDATE        0
+#define HC12_CMD_CODE_SET_BAUD     24
 #define HC12_CMD_SET_BAUD          "AT+B%d\n"
 #define HC12_RSP_SET_BAUD          "OK+B%d"
 #define HC12_ARGS_RSP_SET_BAUD      1
+#define HC12_CMD_CODE_SET_CHANNEL  25
 #define HC12_CMD_SET_CHANNEL       "AT+C%03d\n"
 #define HC12_RSP_SET_CHANNEL       "OK+C%03d"
 #define HC12_ARGS_RSP_SET_CHANNEL   1
+#define HC12_CMD_CODE_SET_TTMODE   26
 #define HC12_CMD_SET_TTMODE        "AT+FU%d\n"
 #define HC12_RSP_SET_TTMODE        "OK+FU%d"
 #define HC12_ARGS_RSP_SET_TTMODE    1
+#define HC12_CMD_CODE_SET_POWER    27
 #define HC12_CMD_SET_POWER         "AT+P%d\n"
 #define HC12_RSP_SET_POWER         "OK+P%d"
 #define HC12_ARGS_RSP_SET_POWER     1
+#define HC12_CMD_CODE_SET_PARAM    28
 #define HC12_CMD_SET_PARAM         "AT+DEFAULT\n"
-#define HC12_RSP_SET_PARAM         "AT+DEFAULT"
+#define HC12_RSP_SET_PARAM         "OK+DEFAULT"
 #define HC12_ARGS_RSP_SET_PARAM     0
+#define HC12_CMD_CODE_SET_SERIAL   29
 #define HC12_CMD_SET_SERIAL        "AT+U%d%c%d\n"
 #define HC12_RSP_SET_SERIAL        "OK+U%d%c%d"
 #define HC12_ARGS_RSP_SET_SERIAL    3
+#define HC12_CMD_CODE_GET_BAUD     30
 #define HC12_CMD_GET_BAUD          "AT+RB\n"
 #define HC12_RSP_GET_BAUD          "OK+B%d"
 #define HC12_ARGS_RSP_GET_BAUD      1
+#define HC12_CMD_CODE_GET_CHANNEL  31
 #define HC12_CMD_GET_CHANNEL       "AT+RC\n"
 #define HC12_RSP_GET_CHANNEL       "OK+RC%d"
 #define HC12_ARGS_RSP_GET_CHANNEL   1
+#define HC12_CMD_CODE_GET_TTMODE   32
 #define HC12_CMD_GET_TTMODE        "AT+RF\n"
 #define HC12_RSP_GET_TTMODE        "OK+FU%d"
 #define HC12_ARGS_RSP_GET_TTMODE    1
+#define HC12_CMD_CODE_GET_POWER    33
 #define HC12_CMD_GET_POWER         "AT+RP\n"
 #define HC12_RSP_GET_POWER         "OK+RP:%ddBm"
 #define HC12_ARGS_RSP_GET_POWER     1
+#define HC12_CMD_CODE_GET_PARAM    34
 #define HC12_CMD_GET_PARAM         "AT+RX\n"
 #define HC12_RSP_GET_PARAM         "OK+B%d\r\nOK+RC%d\r\nOK+RP:%ddBm\r\nOK+FU%d"
 #define HC12_ARGS_RSP_GET_PARAM     4
+#define HC12_CMD_CODE_GET_SERIAL   35
 #define HC12_CMD_GET_SERIAL        "AT+DEFAULT\n"
-#define HC12_RSP_GET_SERIAL        "AT+DEFAULT"
+#define HC12_RSP_GET_SERIAL        "OK+DEFAULT"
 #define HC12_ARGS_RSP_GET_SERIAL    0
+#define HC12_CMD_CODE_GET_VERSION  36
 #define HC12_CMD_GET_VERSION       "AT+V\n"
 #define HC12_RSP_GET_VERSION       "HC-12_V%c.%c"
 #define HC12_ARGS_RSP_GET_VERSION   2
+
+#define HC12_CMD_STATUS_REQUEST     9
+#define HC12_CMD_STATUS_ACTIVE     90
+#define HC12_CMD_STATUS_DONE       99
+#define HC12_CMD_STATUS_FAILED   -100
+#define HC12_CMD_STATUS_UNKNOWN   -99
+#define HC12_CMD_RESPONSE_UNKNOWN -98
 
 #define HC12_DUMP_SERIAL_PARAM      1
 #define HC12_DUMP_FW_INFO           2
@@ -326,6 +348,9 @@ class hc12Radio {
 // SERIAL_5O2 _6O2 _7O2 _8O2
 
     int                _status;
+    int                _currentCommand;
+    int                _commandStatus;
+    int                _responseArgs;
 #if defined(ARDUINO)
     Stream*            _ioStream;
     HardwareSerial*    _hwPort;
@@ -337,8 +362,7 @@ class hc12Radio {
     struct _hc12_param _moduleParam;
     int8_t             _interfaceType;
     int8_t             _currOpMode;
-    char               _commandBuffer[SEND_BUFFER_SIZE];
-    char               _responseBuffer[RESPONSE_BUFFER_SIZE];
+    char               _ioBuffer[IO_BUFFER_SIZE];
 
 
 

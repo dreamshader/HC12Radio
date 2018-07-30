@@ -596,7 +596,7 @@ int serialConnection::readline( char* pBuffer, int bufLen )
                                         {
                                             endLoop = true;
                                             retVal = E_READ_TIMEOUT;
-fprintf(stderr, "timeout %d\n", __LINE__);
+// fprintf(stderr, "timeout %d\n", __LINE__);
                                         }
                                     }
 // nano * 1000 = micro
@@ -610,7 +610,7 @@ fprintf(stderr, "timeout %d\n", __LINE__);
                                         {
                                             endLoop = true;
                                             retVal = E_READ_TIMEOUT;
-fprintf(stderr, "timeout %d\n", __LINE__);
+// fprintf(stderr, "timeout %d\n", __LINE__);
                                         }
 
                                     }
@@ -713,7 +713,7 @@ int serialConnection::readBuffer( char* pBuffer, int bufLen )
                                         {
                                             endLoop = true;
                                             retVal = E_READ_TIMEOUT;
-fprintf(stderr, "timeout %d\n", __LINE__);
+// fprintf(stderr, "timeout %d\n", __LINE__);
                                         }
                                     }
 // nano * 1000 = micro
@@ -727,7 +727,7 @@ fprintf(stderr, "timeout %d\n", __LINE__);
                                         {
                                             endLoop = true;
                                             retVal = E_READ_TIMEOUT;
-fprintf(stderr, "timeout %d\n", __LINE__);
+// fprintf(stderr, "timeout %d\n", __LINE__);
                                         }
 
                                     }
