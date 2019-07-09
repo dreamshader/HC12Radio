@@ -23,6 +23,8 @@
 #ifndef _HC12_RADIO_H_
 #define _HC12_RADIO_H_
 
+#include "serialConnection.h"
+
 #if defined(ARDUINO)
 
     #if ARDUINO > 22
@@ -36,8 +38,7 @@
 
 #else // NOT on Arduino platform
 
-    #include "serialConnection.h"
-
+#if defined( __linux__ )
     #include <iostream>
     #include <string>
     #include <sys/types.h>
@@ -54,6 +55,8 @@
 #if defined(RASPBERRY)
     #include <pigpio.h>
 #endif // defined(RASPBERRY)
+
+#endif // defined( __linux__ )
 
 #endif // ARDUINO
 
@@ -86,6 +89,7 @@ using namespace std;
 #define HC12_ERR_TTMODE           -15
 #define HC12_ERR_CHANNEL          -16
 #define HC12_ERR_POWER            -17
+#define HC12_ERR_RANGE            -18
 
 #define HC12_ERR_INIT_PIGPIO      -30
 
@@ -254,6 +258,8 @@ using namespace std;
 #define HC12_CMD_GET_VERSION       "AT+V\n"
 #define HC12_RSP_GET_VERSION       "HC-12_V%c.%c"
 #define HC12_ARGS_RSP_GET_VERSION   2
+// www.hc01.com  HC-12_V2.4
+// HC-12_V1.1
 
 #define HC12_CMD_STATUS_REQUEST     9
 #define HC12_CMD_STATUS_ACTIVE     90
@@ -276,6 +282,8 @@ struct _hc12_serial_param {
     int dev_fd;
     struct termios oldtio;
     struct termios rawtio;
+#else // NOT defined(__linux__)
+    Stream *pPort;
 #endif // defined(__linux__)
 unsigned int baud;
 unsigned char databit;
@@ -351,13 +359,7 @@ class hc12Radio {
     int                _currentCommand;
     int                _commandStatus;
     int                _responseArgs;
-#if defined(ARDUINO)
-    Stream*            _ioStream;
-    HardwareSerial*    _hwPort;
-    SoftwareSerial*    _swPort;
-#else // NOT on Arduino platform
     serialConnection*  _connection;
-#endif // defined(ARDUINO)
 
     struct _hc12_param _moduleParam;
     int8_t             _interfaceType;
@@ -368,25 +370,21 @@ class hc12Radio {
 
   public:
 #if defined(ARDUINO)
-    hc12Radio(int setPin, HardwareSerial* port = NULL);
-    hc12Radio(int setPin, SoftwareSerial* port = NULL);
-    hc12Radio(int setPin, int powerPin, HardwareSerial* port = NULL);
-    hc12Radio(int setPin, int powerPin, SoftwareSerial* port = NULL);
+    hc12Radio(int setPin, HardwareSerial *port = NULL);
+    hc12Radio(int setPin, SoftwareSerial *port = NULL);
+    hc12Radio(int setPin, int powerPin, HardwareSerial *port = NULL);
+    hc12Radio(int setPin, int powerPin, SoftwareSerial *port = NULL);
 #else // NOT on Arduino platform
     hc12Radio(int setPin = HC12_DEFAULT_SET_PIN,
-              int powerPin = HC12_DEFAULT_POW_PIN) 
-    {  
-        _connection = new serialConnection(); 
-        _moduleParam.setPin = setPin;
-        _moduleParam.powerPin = powerPin;
-        init();
-    };
+              int powerPin = HC12_DEFAULT_POW_PIN);
 #endif // defined(ARDUINO)
 
     void dump( int what );
 
     int getResponse( void );
     int parseResponse( void );
+    short powerDB2Mode( int powerDB );
+    short powerMode2DB( int power );
 
     int sendRequest( void );
     int connect( struct _hc12_serial_param *pParam );

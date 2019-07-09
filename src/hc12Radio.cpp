@@ -22,9 +22,6 @@
 
 #include "hc12Radio.h"
 
-
-
-
 #if defined(__linux__)
 
 void dumpSerialParam( struct _hc12_serial_param *pData )
@@ -289,6 +286,47 @@ bool isValidChannel( int channel )
 
 
 
+#if defined(ARDUINO)
+
+hc12Radio::hc12Radio(int setPin, HardwareSerial *port)
+{
+    _connection = new serialConnection(port);
+    _moduleParam.setPin = setPin;
+}
+
+hc12Radio::hc12Radio(int setPin, SoftwareSerial *port)
+{
+    _connection = new serialConnection(port);
+    _moduleParam.setPin = setPin;
+}
+
+hc12Radio::hc12Radio(int setPin, int powerPin, HardwareSerial *port)
+{
+    _connection = new serialConnection(port);
+    _moduleParam.setPin = setPin;
+    _moduleParam.powerPin = powerPin;
+}
+
+hc12Radio::hc12Radio(int setPin, int powerPin, SoftwareSerial *port)
+{
+    _connection = new serialConnection(port);
+    _moduleParam.setPin = setPin;
+    _moduleParam.powerPin = powerPin;
+}
+
+#else // NOT on Arduino platform
+
+hc12Radio(int setPin, int powerPin) 
+{  
+    _connection = new serialConnection(); 
+    _moduleParam.setPin = setPin;
+    _moduleParam.powerPin = powerPin;
+    init();
+}
+
+#endif // defined(ARDUINO)
+
+
 
 #if defined(__linux__)
 /* 
@@ -317,6 +355,56 @@ void hc12Radio::dump( int what )
 }
 
 #endif // defined(__linux__)
+
+
+
+
+
+
+
+
+/* 
+ ------------------------------------------------------------------------------
+ * int hc12Radio::powerDB2Mode(int powerDB)
+ *
+ * convert dB value to power mode
+ * returns the power mode for a given dB value or an error code
+ ------------------------------------------------------------------------------
+*/
+short hc12Radio::powerDB2Mode(int powerDB)
+{
+    short retVal = HC12_ERR_FAIL;
+
+    for( int i = 0; retVal < 0 && i < HC12_MAX_POWER; i++ )
+    {
+        if( _powTable[i].dbm == powerDB )
+        {
+            retVal = _powTable[i].pIndex;
+        }
+    }
+
+    return( retVal );
+}
+
+/* 
+ ------------------------------------------------------------------------------
+ * int hc12Radio::powerMode2DB(int power)
+ *
+ * convert power mode to dB value
+ * returns a dB value for a given power mode or an error code
+ ------------------------------------------------------------------------------
+*/
+short hc12Radio::powerMode2DB(int power)
+{
+    short retVal = HC12_ERR_RANGE;
+
+    if( power < HC12_MAX_POWER && power >= 0 )
+    {
+        retVal = _powTable[power].dbm;
+    }
+
+    return( retVal );
+}
 
 /* 
  ------------------------------------------------------------------------------
@@ -420,6 +508,7 @@ fprintf(stderr, " P ...");
                                          HC12_RSP_GET_POWER, &powerDB );
                                 if( parsedValues == HC12_ARGS_RSP_GET_POWER )
                                 {
+                                    power = powerDB2Mode(powerDB);
 fprintf(stderr, "match!\n");
                                 }
                                 else
@@ -498,6 +587,7 @@ fprintf(stderr, "OK+P ...");
                                          &power );
                         if( parsedValues == HC12_ARGS_RSP_SET_POWER )
                         {
+                            powerDB = powerMode2DB(power);
 fprintf(stderr, "match!\n");
                         }
                         else
@@ -645,7 +735,7 @@ fprintf(stderr, "NO match!\n");
             case HC12_CMD_CODE_SET_POWER:
                 if( _responseArgs == HC12_ARGS_RSP_SET_POWER )
                 {
-//                    _moduleParam.power = powerDB / power;
+                    _moduleParam.power = power;
                     _commandStatus = HC12_CMD_STATUS_DONE;
                     _currentCommand = HC12_CMD_CODE_NULL;
                     retVal = NO_MORE_DATA;
@@ -701,7 +791,7 @@ fprintf(stderr, "NO match!\n");
             case HC12_CMD_CODE_GET_POWER:
                 if( _responseArgs == HC12_ARGS_RSP_GET_POWER )
                 {
-//                    _moduleParam.power = powerDB / power;
+                    _moduleParam.power = power;
                     _commandStatus = HC12_CMD_STATUS_DONE;
                     _currentCommand = HC12_CMD_CODE_NULL;
                     retVal = NO_MORE_DATA;
@@ -713,7 +803,7 @@ fprintf(stderr, "NO match!\n");
                     _moduleParam.serialParam.baud = baud;
                     _moduleParam.comChannel = channel;
                     _moduleParam.ttMode = ttMode;
-//                    _moduleParam.power = powerDB / power;
+                    _moduleParam.power = power;
                     _commandStatus = HC12_CMD_STATUS_DONE;
                     _currentCommand = HC12_CMD_CODE_NULL;
                     retVal = NO_MORE_DATA;
@@ -838,6 +928,10 @@ fprintf(stderr, "RESPONSE: %s\n", _ioBuffer);
 fprintf(stderr, "Command complete ...\n");
                 retVal = E_OK;
             }
+            else
+            {
+fprintf(stderr, "Command terminates with error %d\n", retVal);
+            }
         }
     }
     else
@@ -864,7 +958,11 @@ int hc12Radio::connect( struct _hc12_serial_param *pParam )
     {
         if( pParam != NULL )
         {
+#if defined(__linux__)
             _moduleParam.serialParam.device = strdup( pParam->device );
+#else // NOT defined(__linux__)
+            _moduleParam.serialParam.pPort = pParam->pPort;
+#endif // defined(__linux__)
             _moduleParam.serialParam.baud = pParam->baud;
             _moduleParam.serialParam.databit = pParam->databit;
             _moduleParam.serialParam.parity = pParam->parity;
@@ -872,7 +970,12 @@ int hc12Radio::connect( struct _hc12_serial_param *pParam )
             _moduleParam.serialParam.handshake = pParam->handshake;
         }
 
+#if defined(__linux__)
         retVal = _connection->ser_open( _moduleParam.serialParam.device,
+#else // NOT defined(__linux__)
+        retVal = _connection->ser_open( _moduleParam.serialParam.pPort,
+#endif // defined(__linux__)
+
                                         _moduleParam.serialParam.baud,
                                         _moduleParam.serialParam.databit,
                                         _moduleParam.serialParam.parity,
@@ -934,8 +1037,10 @@ printf("enter Command mode\n");
     {
         if( _moduleParam.setPin != HC12_NULLPIN )
         {
+#if defined(RASPBERRY)
             gpioWrite(_moduleParam.setPin, HC12_SETPIN_CMD_MODE);
             usleep(60 * MILLISECONDS);
+#endif // defined(RASPBERRY)
         }
 
         _currOpMode = HC12_OP_CMD_MODE;
@@ -963,8 +1068,10 @@ printf("leave Command mode\n");
     {
         if( _moduleParam.setPin != HC12_NULLPIN )
         {
+#if defined(RASPBERRY)
             gpioWrite(_moduleParam.setPin, HC12_SETPIN_TT_MODE);
             usleep(100 * MILLISECONDS);
+#endif // defined(RASPBERRY)
         }
 
         _currOpMode = HC12_OP_TT_MODE;
@@ -1017,11 +1124,16 @@ fprintf(stderr, "ERR init pigpio\n");
     _moduleParam.ttMode = HC12_DEFAULT_TTMODE;
     _moduleParam.power = HC12_DEFAULT_POWER;
  
+#if defined(__linux__)
     _moduleParam.serialParam.device = strdup( (char*) HC12_DEFAULT_DEVICE );
+
     _moduleParam.serialParam.dev_fd = -1;
 
     memset( &_moduleParam.serialParam.oldtio, '\0', sizeof(struct termios) );
     memset( &_moduleParam.serialParam.rawtio, '\0', sizeof(struct termios) );
+#else // NOT defined(__linux__)
+    _moduleParam.serialParam.pPort = NULL;
+#endif // defined(__linux__)
 
     _moduleParam.serialParam.baud = HC12_DEFAULT_BAUD;
     _moduleParam.serialParam.databit = HC12_DEFAULT_DATABIT;
@@ -2013,6 +2125,41 @@ int hc12Radio::getFWVersion( struct _hc12_fw_info* pFWInfo )
 
 //
 #ifdef NEVERDEF
+
+
+155|0x9B|CI|CSI| Control Sequence Intro 	
+               | Einleitung einer Steuersequenz. Siehe ANSI-Escapesequenz.
+156|0x9C|SI|ST | String Terminator
+               | Zeichen für das Ende einer Zeichenkette, die mit 
+               | APC, DCS, OSC, PM oder SOS begonnen wurde.
+157|0x9D|OC|OSC| Operating System Command
+               | Markiert den Beginn einer „Operating System Command“-
+               | Zeichenkette, die mit ST („String Terminator“) beendet wird. 
+               | Die Interpretation der Zeichenkette obliegt dem jeweiligen 
+               | Betriebssystem.
+158|0x9E|PM|PM | Privacy Message
+               | Markiert den Beginn einer „Privacy Message“, die mit 
+               | ST („String Terminator“) beendet wird.
+159|0x9F|AC|APC| Application Program Command
+               | Markiert den Beginn einer „Application Program Command“-
+               | Zeichenkette, die mit ST („String Terminator“) beendet wird. 
+               | Die Interpretation der Zeichenkette obliegt dem jeweiligen 
+               | Programm.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #define HC12_ARGS_RSP_SET_DEFAULT   0
 #define HC12_ARGS_RSP_SLEEP         0

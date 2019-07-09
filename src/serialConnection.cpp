@@ -4,7 +4,7 @@
  *  serialConnection.cpp - a class for simplifying access to a
  *                         serial line
  *
- *  Copyright (C) 2018 Dreamshader (aka Dirk Schanz)
+ *  Copyright (C) 2018/2019 Dreamshader (aka Dirk Schanz)
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -21,9 +21,58 @@
  ***********************************************************************
  */
 
-#if defined( __linux__ )
 
 #include "serialConnection.h"
+
+
+#if defined( __linux__ )
+/* ----------------------------------------------------------------------------
+ * serialConnection::serialConnection( char *devname,    uint32_t baud,
+ *                                     int16_t databits, int8_t parity,
+ *                                     int16_t stopbits, int8_t handshake )
+ *
+ * Create serialConnection object
+ ------------------------------------------------------------------------------
+*/
+serialConnection::serialConnection( char *devname,    uint32_t baud,
+                                    int16_t databits, int8_t parity,
+                                    int16_t stopbits, int8_t handshake )
+{
+
+    if( isValidDevice( devname ) )
+    {
+        this->device = strdup(devname);
+        if( isValidBaud( baud ) )
+        {
+            this->baud = baud;
+            if( isValidDatabits( databits ) )
+            {
+                this->databits = databits;
+                if( isValidParity( parity ) )
+                {
+                    this->parity = parity;
+                    if( isValidStopbits( stopbits ) )
+                    {
+                        this->stopbits = stopbits;
+                        if( isValidHandshake( handshake ) )
+                        {
+                            this->handshake = handshake;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+#else // NOT defined( __linux__ )
+serialConnection::serialConnection( Stream *ioStream,  uint32_t baud,
+                                    int16_t databits, int8_t parity,
+                                    int16_t stopbits, int8_t handshake )
+{
+}
+
+#endif // defined( __linux__ )
+
 
 /* ----------------------------------------------------------------------------
  * bool serialConnection::isValidDevice( char* pDeviceName )
@@ -35,6 +84,8 @@
 bool serialConnection::isValidDevice( char* pDeviceName )
 {
     bool retVal = false;
+
+#if defined( __linux__ )
 
     if( pDeviceName != NULL )
     {
@@ -52,6 +103,11 @@ bool serialConnection::isValidDevice( char* pDeviceName )
     {
         errorNum = E_PARAM_NULL;
     }
+
+#else // NOT defined( __linux__ )
+    retVal = true;
+    errorNum = E_OK;
+#endif // defined( __linux__ )
 
     return( retVal );
 }
@@ -210,6 +266,8 @@ bool serialConnection::isValidHandshake( int8_t handshake )
 
     return( retVal );
 }
+
+#if defined( __linux__ )
 
 /* ----------------------------------------------------------------------------
  * int serialConnection::setup( char *devname, unsigned int baud, 
@@ -473,6 +531,48 @@ int serialConnection::ser_open( void )
     return( retVal );
 }
 
+#else // NOT defined( __linux__ )
+
+/* ----------------------------------------------------------------------------
+ * int serialConnection::setup( Stream *ioStream, uint32_t baud, 
+ *                              int16_t databits, int8_t parity, 
+ *                              int16_t stopbits, int8_t handshake )
+ *
+ * set all connection parameters at once
+ * returns E_OK on succes, otherwise an error number
+ ------------------------------------------------------------------------------
+*/
+int serialConnection::setup( Stream *ioStream, uint32_t baud, 
+                             int16_t databits, int8_t parity, 
+                             int16_t stopbits, int8_t handshake )
+{
+    int retVal = E_OK;
+
+    return( retVal );
+}
+
+
+/* ----------------------------------------------------------------------------
+ * int serialConnection::ser_open( Stream *ioStream, uint32_t baud, 
+ *                                 short databits,   int8_t parity, 
+ *                                 int16_t stopbits, int8_t handshake )
+ *
+ * open connection with given parameters
+ * returns E_OK on succes, otherwise an error number
+ ------------------------------------------------------------------------------
+*/
+int serialConnection::ser_open( Stream *ioStream, uint32_t baud, 
+                                short databits,   int8_t parity, 
+                                int16_t stopbits, int8_t handshake )
+{
+    int retVal = E_OK;
+
+    return( retVal );
+}
+
+
+#endif // defined( __linux__ )
+
 /* ----------------------------------------------------------------------------
  * int serialConnection::ser_close( void )
  *
@@ -484,6 +584,7 @@ int serialConnection::ser_close( void )
 {
     int retVal = E_OK;
 
+#if defined( __linux__ )
     if( this->dev_fd > 0 )
     {
         close( this->dev_fd );
@@ -493,6 +594,9 @@ int serialConnection::ser_close( void )
     {
         retVal = E_PARAM_NOFD;
     }
+#else // NOT defined( __linux__ )
+
+#endif // defined( __linux__ )
 
     return( retVal );
 }
@@ -506,7 +610,9 @@ int serialConnection::ser_close( void )
 */
 void serialConnection::flushOutput( void )
 {
+#if defined( __linux__ )
     tcflush( this->dev_fd, TCOFLUSH );
+#endif // defined( __linux__ )
 }
 
 /* ----------------------------------------------------------------------------
@@ -518,7 +624,9 @@ void serialConnection::flushOutput( void )
 */
 void serialConnection::flushInput( void )
 {
+#if defined( __linux__ )
     tcflush( this->dev_fd, TCIFLUSH );
+#endif // defined( __linux__ )
 }
 
 /* ----------------------------------------------------------------------------
@@ -537,6 +645,8 @@ int serialConnection::readline( char* pBuffer, int bufLen )
     int idx = 0;
     bool endLoop;
     bool retry;
+
+#if defined( __linux__ )
     struct timespec startTimeout;
     struct timespec current;
     clockid_t clk_id = CLOCK_MONOTONIC_COARSE;
@@ -637,6 +747,8 @@ int serialConnection::readline( char* pBuffer, int bufLen )
     {
         retVal = E_PARAM_NULL;
     }
+#else // NOT defined( __linux__ )
+#endif // defined( __linux__ )
 
     return( retVal );
 }
@@ -657,6 +769,9 @@ int serialConnection::readBuffer( char* pBuffer, int bufLen )
     int idx = 0;
     bool endLoop;
     bool retry;
+
+#if defined( __linux__ )
+
     struct timespec startTimeout;
     struct timespec current;
     clockid_t clk_id = CLOCK_MONOTONIC_COARSE;
@@ -755,6 +870,9 @@ int serialConnection::readBuffer( char* pBuffer, int bufLen )
         retVal = E_PARAM_NULL;
     }
 
+#else // NOT defined( __linux__ )
+#endif // defined( __linux__ )
+
     return( retVal );
 }
 
@@ -769,6 +887,8 @@ int serialConnection::readBuffer( char* pBuffer, int bufLen )
 int serialConnection::ser_write( char* pBuffer, int wrLen )
 {
     int retVal = E_OK;
+
+#if defined( __linux__ )
 
     if( pBuffer != NULL )
     {
@@ -798,7 +918,9 @@ int serialConnection::ser_write( char* pBuffer, int wrLen )
         retVal = E_PARAM_NULL;
     }
 
+#else // NOT defined( __linux__ )
+#endif // defined( __linux__ )
+
     return( retVal );
 }
 
-#endif // defined( __linux__ )
