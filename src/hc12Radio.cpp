@@ -316,7 +316,7 @@ hc12Radio::hc12Radio(int setPin, int powerPin, SoftwareSerial *port)
 
 #else // NOT on Arduino platform
 
-hc12Radio(int setPin, int powerPin) 
+hc12Radio::hc12Radio(int setPin, int powerPin) 
 {  
     _connection = new serialConnection(); 
     _moduleParam.setPin = setPin;
