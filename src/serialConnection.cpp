@@ -104,6 +104,8 @@ serialConnection::serialConnection( HardwareSerial *pHardSerial,
         this->pHSerial = pHardSerial;
         isHardwarePort = true;
 
+        param2configByte( databits, parity, stopbits, &_config );
+
         if( isValidBaud( baud ) )
         {
             this->baud = baud;
