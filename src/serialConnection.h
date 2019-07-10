@@ -33,7 +33,8 @@
         #include "WProgram.h"
     #endif
 
-    #include "Stream.h"
+    #include "SoftwareSerial.h"
+//    #include "Stream.h"
 
 #else // NOT on Arduino platform
 
@@ -62,7 +63,7 @@ using namespace std;
 
 #define DEFAULT_CONNECTIONTYPE    -1
 #define DEFAULT_DEVICE            "/dev/ttyUSB0"
-#define DEFAULT_BAUD           38400
+#define DEFAULT_BAUD            9600
 #define DEFAULT_DATABIT            8
 #define DEFAULT_STOPBITS           1
 #define DEFAULT_PARITY            'N'
@@ -83,6 +84,9 @@ using namespace std;
 #define E_PARAM_LENGTH           -18
 #define E_NULL_CONNECTION        -19
 #define E_READ_TIMEOUT           -20
+// Arduino only
+#define E_PARAM_NULL_STREAM      -21
+#define E_PARAM_NOT_SUPPORTED    -22
 
 #define CONNECTION_TYPE_UART      'u'
 #define CONNECTION_TYPE_I2C       'i'
@@ -120,8 +124,6 @@ class serialConnection {
 #if defined( __linux__ )
         int16_t        dev_fd;
         struct termios newtio;
-#else // defined( __linux__ )
-        Stream *ioStream;
 #endif // defined( __linux__ )
 
         bool           dataReceived;
@@ -129,13 +131,24 @@ class serialConnection {
         uint32_t       connFlags;
 
 #if defined( __linux__ )
-        char           *device;
+        char          *device;
+#else // defined( __linux__ )
+    #if defined(ARDUINO)
+        SoftwareSerial *pSSerial;
+        HardwareSerial *pHSerial;
+        bool           isHardwarePort;
+    #endif // NOT on Arduino platform
 #endif // defined( __linux__ )
+
         uint32_t       baud;
         int16_t        databits;
         int8_t         parity;
         int16_t        stopbits;
         int8_t         handshake;
+
+#if defined(ARDUINO)
+        byte           _config;
+#endif // NOT on Arduino platform
 
     public:
         int            errorNum;
@@ -150,20 +163,27 @@ class serialConnection {
                           int16_t stopbits = DEFAULT_STOPBITS, 
                           int8_t handshake = DEFAULT_HANDSHAKE );
 #else // NOT defined( __linux__ )
-        serialConnection( Stream *ioStream, 
+    #if defined(ARDUINO)
+        serialConnection( SoftwareSerial *pSoftSerial,
+                          uint32_t baud = DEFAULT_BAUD );
+
+        serialConnection( HardwareSerial *pHardSerial,
                           uint32_t baud = DEFAULT_BAUD, 
                           int16_t databits = DEFAULT_DATABIT, 
                           int8_t parity = DEFAULT_PARITY, 
-                          int16_t stopbits = DEFAULT_STOPBITS, 
-                          int8_t handshake = DEFAULT_HANDSHAKE );
+                          int16_t stopbits = DEFAULT_STOPBITS );
+    #endif // NOT on Arduino platform
 #endif // defined( __linux__ )
 
         bool isValidBaud( uint32_t baud );
         bool isValidDatabits( int16_t databits );
         bool isValidParity( int8_t parity );
         bool isValidStopbits( int16_t stopbits );
+
+#if defined( __linux__ )
         bool isValidHandshake( int8_t handshake );
         bool isValidDevice( char* pDeviceName );
+#endif // defined( __linux__ )
 
 #if defined( __linux__ )
         int set_termios( void );
@@ -174,11 +194,20 @@ class serialConnection {
         int ser_open( char *devname, uint32_t baud, short databits, 
                   int8_t parity, int16_t stopbits, int8_t handshake );
 #else // NOT defined( __linux__ )
-        int setup( Stream *ioStream, uint32_t baud, int16_t databits,
-                   int8_t parity, int16_t stopbits, int8_t handshake );
+    #if defined(ARDUINO)
+        int param2configByte( short databits, int8_t parity, 
+                              int16_t stopbits, byte *pConfig );
 
-        int ser_open( Stream *ioStream, uint32_t baud, short databits, 
-                  int8_t parity, int16_t stopbits, int8_t handshake );
+        int setup( HardwareSerial *pHardSerial, uint32_t baud, 
+                   int16_t databits, int8_t parity, int16_t stopbits );
+
+        int ser_open( HardwareSerial *pHardSerial, uint32_t baud, 
+                  short databits, int8_t parity, int16_t stopbits );
+
+        int setup( SoftwareSerial *pSoftSerial, uint32_t baud );
+
+        int ser_open( SoftwareSerial *pSoftSerial, uint32_t baud );
+    #endif // NOT on Arduino platform
 #endif // defined( __linux__ )
 
         int ser_open( void );

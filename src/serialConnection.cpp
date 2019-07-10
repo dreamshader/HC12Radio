@@ -64,16 +64,311 @@ serialConnection::serialConnection( char *devname,    uint32_t baud,
         }
     }
 }
+
 #else // NOT defined( __linux__ )
-serialConnection::serialConnection( Stream *ioStream,  uint32_t baud,
-                                    int16_t databits, int8_t parity,
-                                    int16_t stopbits, int8_t handshake )
+    #if defined(ARDUINO)
+/* ----------------------------------------------------------------------------
+ * serialConnection::serialConnection( SoftwareSerial *pSoftSerial,
+ *                                     uint32_t baud )
+ *
+ * Create serialConnection object
+ ------------------------------------------------------------------------------
+*/
+serialConnection::serialConnection( SoftwareSerial *pSoftSerial, uint32_t baud )
 {
+    if( pSoftSerial != NULL )
+    {
+        this->pSSerial = pSoftSerial;
+        isHardwarePort = false;
+        if( isValidBaud( baud ) )
+        {
+            this->baud = baud;
+        }
+    }
 }
 
+/* ----------------------------------------------------------------------------
+ * serialConnection::serialConnection( HardwareSerial *pHardSerial,
+ *                                     uint32_t baud, int16_t databits, 
+ *                                     int8_t parity, int16_t stopbits )
+ *
+ * Create serialConnection object
+ ------------------------------------------------------------------------------
+*/
+serialConnection::serialConnection( HardwareSerial *pHardSerial,
+                                    uint32_t baud, int16_t databits, 
+                                    int8_t parity, int16_t stopbits )
+{
+    if( pHardSerial != NULL )
+    {
+        this->pHSerial = pHardSerial;
+        isHardwarePort = true;
+
+        if( isValidBaud( baud ) )
+        {
+            this->baud = baud;
+            if( isValidDatabits( databits ) )
+            {
+                this->databits = databits;
+                if( isValidParity( parity ) )
+                {
+                    this->parity = parity;
+                    if( isValidStopbits( stopbits ) )
+                    {
+                        this->stopbits = stopbits;
+                    }
+                }
+            }
+        }
+    }
+}
+
+/* ----------------------------------------------------------------------------
+ * int serialConnection::param2configByte( short databits, int8_t parity, 
+ *                        int16_t stopbits, byte *pConfig )
+ *
+ * Convert the settings to a config byte for Arduino begin()
+ ------------------------------------------------------------------------------
+*/
+int serialConnection::param2configByte( short databits, int8_t parity, 
+                       int16_t stopbits, byte *pConfig )
+{
+    int retVal = E_OK;
+
+    if( pConfig != NULL )
+    {
+        switch( databits )
+        {
+            case 5:
+                switch( parity )
+                {
+                    case 'O':
+                    case 'o':
+                        switch( stopbits )
+                        {
+                            case 1:
+                                *pConfig = SERIAL_5O1;
+                                break;
+                            case 2:
+                                *pConfig = SERIAL_5O2;
+                                break;
+                            default:
+                                retVal = errorNum = E_PARAM_STOPBITS;
+                                break;
+                        }
+                        break;
+                    case 'E':
+                    case 'e':
+                        switch( stopbits )
+                        {
+                            case 1:
+                                *pConfig = SERIAL_5E1;
+                                break;
+                            case 2:
+                                *pConfig = SERIAL_5E2;
+                                break;
+                            default:
+                                retVal = errorNum = E_PARAM_STOPBITS;
+                                break;
+                        }
+                        break;
+                    case 'N':
+                    case 'n':
+                        switch( stopbits )
+                        {
+                            case 1:
+                                *pConfig = SERIAL_5N1;
+                                break;
+                            case 2:
+                                *pConfig = SERIAL_5N2;
+                                break;
+                            default:
+                                retVal = errorNum = E_PARAM_STOPBITS;
+                                break;
+                        }
+                        break;
+                    default:
+                        retVal = errorNum = E_PARAM_PARITY;
+                        break;
+                }
+                break;
+            case 6:
+                switch( parity )
+                {
+                    case 'O':
+                    case 'o':
+                        switch( stopbits )
+                        {
+                            case 1:
+                                *pConfig = SERIAL_6O1;
+                                break;
+                            case 2:
+                                *pConfig = SERIAL_6O2;
+                                break;
+                            default:
+                                retVal = errorNum = E_PARAM_STOPBITS;
+                                break;
+                        }
+                        break;
+                    case 'E':
+                    case 'e':
+                        switch( stopbits )
+                        {
+                            case 1:
+                                *pConfig = SERIAL_6E1;
+                                break;
+                            case 2:
+                                *pConfig = SERIAL_6E2;
+                                break;
+                            default:
+                                retVal = errorNum = E_PARAM_STOPBITS;
+                                break;
+                        }
+                        break;
+                    case 'N':
+                    case 'n':
+                        switch( stopbits )
+                        {
+                            case 1:
+                                *pConfig = SERIAL_6N1;
+                                break;
+                            case 2:
+                                *pConfig = SERIAL_6N2;
+                                break;
+                            default:
+                                retVal = errorNum = E_PARAM_STOPBITS;
+                                break;
+                        }
+                        break;
+                    default:
+                        retVal = errorNum = E_PARAM_PARITY;
+                        break;
+                }
+                break;
+            case 7:
+                switch( parity )
+                {
+                    case 'O':
+                    case 'o':
+                        switch( stopbits )
+                        {
+                            case 1:
+                                *pConfig = SERIAL_7O1;
+                                break;
+                            case 2:
+                                *pConfig = SERIAL_7O2;
+                                break;
+                            default:
+                                retVal = errorNum = E_PARAM_STOPBITS;
+                                break;
+                        }
+                        break;
+                    case 'E':
+                    case 'e':
+                        switch( stopbits )
+                        {
+                            case 1:
+                                *pConfig = SERIAL_7E1;
+                                break;
+                            case 2:
+                                *pConfig = SERIAL_7E2;
+                                break;
+                            default:
+                                retVal = errorNum = E_PARAM_STOPBITS;
+                                break;
+                        }
+                        break;
+                    case 'N':
+                    case 'n':
+                        switch( stopbits )
+                        {
+                            case 1:
+                                *pConfig = SERIAL_7N1;
+                                break;
+                            case 2:
+                                *pConfig = SERIAL_7N2;
+                                break;
+                            default:
+                                retVal = errorNum = E_PARAM_STOPBITS;
+                                break;
+                        }
+                        break;
+                    default:
+                        retVal = errorNum = E_PARAM_PARITY;
+                        break;
+                }
+                break;
+            case 8:
+                switch( parity )
+                {
+                    case 'O':
+                    case 'o':
+                        switch( stopbits )
+                        {
+                            case 1:
+                                *pConfig = SERIAL_8O1;
+                                break;
+                            case 2:
+                                *pConfig = SERIAL_8O2;
+                                break;
+                            default:
+                                retVal = errorNum = E_PARAM_STOPBITS;
+                                break;
+                        }
+                        break;
+                    case 'E':
+                    case 'e':
+                        switch( stopbits )
+                        {
+                            case 1:
+                                *pConfig = SERIAL_8E1;
+                                break;
+                            case 2:
+                                *pConfig = SERIAL_8E2;
+                                break;
+                            default:
+                                retVal = errorNum = E_PARAM_STOPBITS;
+                                break;
+                        }
+                        break;
+                    case 'N':
+                    case 'n':
+                        switch( stopbits )
+                        {
+                            case 1:
+                                *pConfig = SERIAL_8N1;
+                                break;
+                            case 2:
+                                *pConfig = SERIAL_8N2;
+                                break;
+                            default:
+                                retVal = errorNum = E_PARAM_STOPBITS;
+                                break;
+                        }
+                        break;
+                    default:
+                        retVal = errorNum = E_PARAM_PARITY;
+                        break;
+                }
+                break;
+            default:
+                retVal = errorNum = E_PARAM_DATABIT;
+                break;
+        }
+    }
+    else
+    {
+        retVal = errorNum = E_PARAM_NULL;
+    }
+
+    return( retVal );
+
+}
+    #endif // NOT on Arduino platform
 #endif // defined( __linux__ )
 
 
+#if defined( __linux__ )
 /* ----------------------------------------------------------------------------
  * bool serialConnection::isValidDevice( char* pDeviceName )
  *
@@ -84,8 +379,6 @@ serialConnection::serialConnection( Stream *ioStream,  uint32_t baud,
 bool serialConnection::isValidDevice( char* pDeviceName )
 {
     bool retVal = false;
-
-#if defined( __linux__ )
 
     if( pDeviceName != NULL )
     {
@@ -104,13 +397,9 @@ bool serialConnection::isValidDevice( char* pDeviceName )
         errorNum = E_PARAM_NULL;
     }
 
-#else // NOT defined( __linux__ )
-    retVal = true;
-    errorNum = E_OK;
-#endif // defined( __linux__ )
-
     return( retVal );
 }
+#endif // defined( __linux__ )
 
 /* ----------------------------------------------------------------------------
  * bool serialConnection::isValidBaud( unsigned int baud )
@@ -119,10 +408,12 @@ bool serialConnection::isValidDevice( char* pDeviceName )
  * return true on succes, false otherwise
  ------------------------------------------------------------------------------
 */
+
 bool serialConnection::isValidBaud( uint32_t baud )
 {
     bool retVal = false;
 
+#if defined( __linux__ )
     switch( baud )
     {
         case     50:
@@ -151,6 +442,18 @@ bool serialConnection::isValidBaud( uint32_t baud )
             errorNum = E_PARAM_BAUDRATE;
             break;
     }
+#else // NOT defined( __linux__ )
+    #if defined(ARDUINO)
+    if( baud > 0 )
+    {
+        retVal = true;
+    }
+    else
+    {
+        errorNum = E_PARAM_BAUDRATE;
+    }
+    #endif // NOT on Arduino platform
+#endif // defined( __linux__ )
 
     return( retVal );
 }
@@ -239,6 +542,7 @@ bool serialConnection::isValidStopbits( int16_t stopbits )
     return( retVal );
 }
 
+#if defined( __linux__ )
 /* ----------------------------------------------------------------------------
  * bool serialConnection::isValidHandshake( char handshake )
  *
@@ -266,9 +570,9 @@ bool serialConnection::isValidHandshake( int8_t handshake )
 
     return( retVal );
 }
+#endif // defined( __linux__ )
 
 #if defined( __linux__ )
-
 /* ----------------------------------------------------------------------------
  * int serialConnection::setup( char *devname, unsigned int baud, 
  *          short databits, char parity, short stopbits, char handshake )
@@ -311,7 +615,87 @@ int serialConnection::setup( char *devname, uint32_t baud, int16_t databits,
 
     return( errorNum );
 }
+#else // NOT defined( __linux__ )
+    #if defined(ARDUINO)
+/* ----------------------------------------------------------------------------
+ * int serialConnection::setup( HardwareSerial *pHardSerial,
+ *                              uint32_t baud, int16_t databits, 
+ *                              int8_t parity, int16_t stopbits )
+ *
+ * set all connection parameters at once
+ * returns E_OK on succes, otherwise an error number
+ ------------------------------------------------------------------------------
+*/
+int serialConnection::setup( HardwareSerial *pHardSerial,
+                             uint32_t baud, int16_t databits, 
+                             int8_t parity, int16_t stopbits )
+{
+    int retVal = E_OK;
 
+    if( pHardSerial != NULL )
+    {
+        this->pHSerial = pHardSerial;
+        isHardwarePort = true;
+
+        param2configByte( databits, parity, stopbits, &_config );
+
+        if( isValidBaud( baud ) )
+        {
+            this->baud = baud;
+            if( isValidDatabits( databits ) )
+            {
+                this->databits = databits;
+                if( isValidParity( parity ) )
+                {
+                    this->parity = parity;
+                    if( isValidStopbits( stopbits ) )
+                    {
+                        this->stopbits = stopbits;
+                    }
+                }
+            }
+        }
+    }
+    else
+    {
+        errorNum = E_PARAM_NULL_STREAM;
+    }
+
+    return( retVal = errorNum );
+}
+
+/* ----------------------------------------------------------------------------
+ * int serialConnection::setup( SoftwareSerial *pSoftSerial, uint32_t baud )
+ *
+ * set all connection parameters at once
+ * returns E_OK on succes, otherwise an error number
+ ------------------------------------------------------------------------------
+*/
+int serialConnection::setup( SoftwareSerial *pSoftSerial, uint32_t baud )
+{
+    int retVal = E_OK;
+
+    if( pSoftSerial != NULL )
+    {
+        this->pSSerial = pSoftSerial;
+        isHardwarePort = false;
+        if( isValidBaud( baud ) )
+        {
+            this->baud = baud;
+        }
+    }
+    else
+    {
+        errorNum = E_PARAM_NULL_STREAM;
+    }
+
+    return( retVal = errorNum );
+}
+    #endif // NOT on Arduino platform
+#endif // defined( __linux__ )
+
+
+#if defined( __linux__ )
 /* ----------------------------------------------------------------------------
  * int serialConnection::set_termios( void )
  *
@@ -488,27 +872,75 @@ int serialConnection::ser_open( char *devname, uint32_t baud,
     if( (retVal = setup( devname, baud, databits, parity, 
                         stopbits, handshake )) == E_OK )
     {
-	if( (this->dev_fd = open( device, O_RDWR|O_NOCTTY|O_NONBLOCK)) <= 0 )
-        {
-            this->errorNum = errno;
-            retVal = E_FAIL;
-        }
-        else
-        {
-            tcgetattr( this->dev_fd, &this->newtio );
-            cfmakeraw( &this->newtio );
-            retVal = set_termios( );
-        }
+        retVal = ser_open();
+    }
+//        if( (this->dev_fd = open( device, O_RDWR|O_NOCTTY|O_NONBLOCK)) <= 0 )
+//        {
+//            this->errorNum = errno;
+//            retVal = E_FAIL;
+//        }
+//        else
+//        {
+//            tcgetattr( this->dev_fd, &this->newtio );
+//            cfmakeraw( &this->newtio );
+//            retVal = set_termios( );
+//        }
+//    }
+
+    return( retVal );
+}
+#else // NOT defined( __linux__ )
+    #if defined(ARDUINO)
+/* ----------------------------------------------------------------------------
+ * int serialConnection::ser_open( HardwareSerial *pHardSerial,
+ *                                 uint32_t baud, short databits,
+ *                                 int8_t parity, int16_t stopbits )
+ *
+ * open connection with given parameters
+ * returns E_OK on succes, otherwise an error number
+ ------------------------------------------------------------------------------
+*/
+int serialConnection::ser_open( HardwareSerial *pHardSerial,
+                                uint32_t baud, short databits,
+                                int8_t parity, int16_t stopbits )
+{
+    int retVal = E_OK;
+
+    if( (retVal = setup( pHardSerial, baud, databits, 
+                         parity, stopbits )) == E_OK )
+    {
+        retVal = ser_open();
     }
 
     return( retVal );
 }
 
 /* ----------------------------------------------------------------------------
- * int serialConnection::ser_open( char *devname, unsigned int baud, 
- *          short databits, char parity, short stopbits, char handshake )
+ * int serialConnection::ser_open( SoftwareSerial *pSoftSerial, uint32_t baud )
  *
  * open connection with given parameters
+ * returns E_OK on succes, otherwise an error number
+ ------------------------------------------------------------------------------
+*/
+int serialConnection::ser_open( SoftwareSerial *pSoftSerial, uint32_t baud )
+{
+    int retVal = E_OK;
+
+    if( (retVal = setup( pSoftSerial, baud )) == E_OK )
+    {
+        retVal = ser_open();
+    }
+
+    return( retVal );
+}
+    #endif // NOT on Arduino platform
+#endif // defined( __linux__ )
+
+
+/* ----------------------------------------------------------------------------
+ * int serialConnection::ser_open( void )
+ *
+ * open connection with stored parameters
  * returns E_OK on succes, otherwise an error number
  ------------------------------------------------------------------------------
 */
@@ -516,6 +948,7 @@ int serialConnection::ser_open( void )
 {
     int retVal = E_OK;
 
+#if defined( __linux__ )
     if( (this->dev_fd = open( device, O_RDWR|O_NOCTTY|O_NONBLOCK)) <= 0 )
     {
         this->errorNum = errno;
@@ -527,51 +960,35 @@ int serialConnection::ser_open( void )
         cfmakeraw( &this->newtio );
         retVal = set_termios( );
     }
-
-    return( retVal );
-}
-
 #else // NOT defined( __linux__ )
-
-/* ----------------------------------------------------------------------------
- * int serialConnection::setup( Stream *ioStream, uint32_t baud, 
- *                              int16_t databits, int8_t parity, 
- *                              int16_t stopbits, int8_t handshake )
- *
- * set all connection parameters at once
- * returns E_OK on succes, otherwise an error number
- ------------------------------------------------------------------------------
-*/
-int serialConnection::setup( Stream *ioStream, uint32_t baud, 
-                             int16_t databits, int8_t parity, 
-                             int16_t stopbits, int8_t handshake )
-{
-    int retVal = E_OK;
-
-    return( retVal );
-}
-
-
-/* ----------------------------------------------------------------------------
- * int serialConnection::ser_open( Stream *ioStream, uint32_t baud, 
- *                                 short databits,   int8_t parity, 
- *                                 int16_t stopbits, int8_t handshake )
- *
- * open connection with given parameters
- * returns E_OK on succes, otherwise an error number
- ------------------------------------------------------------------------------
-*/
-int serialConnection::ser_open( Stream *ioStream, uint32_t baud, 
-                                short databits,   int8_t parity, 
-                                int16_t stopbits, int8_t handshake )
-{
-    int retVal = E_OK;
-
-    return( retVal );
-}
-
-
+    #if defined(ARDUINO)
+    if( isHardwarePort )
+    {
+        if( pHSerial != NULL )
+        {
+            pHSerial->begin(baud, _config);
+        }
+        else
+        {
+            retVal = E_PARAM_NULL_STREAM;
+        }
+    }
+    else
+    {
+        if( pSSerial != NULL )
+        {
+            pSSerial->begin(baud);
+        }
+        else
+        {
+            retVal = E_PARAM_NULL_STREAM;
+        }
+    }
+    #endif // NOT on Arduino platform
 #endif // defined( __linux__ )
+
+    return( retVal );
+}
 
 /* ----------------------------------------------------------------------------
  * int serialConnection::ser_close( void )
@@ -595,7 +1012,30 @@ int serialConnection::ser_close( void )
         retVal = E_PARAM_NOFD;
     }
 #else // NOT defined( __linux__ )
-
+    #if defined(ARDUINO)
+    if( isHardwarePort )
+    {
+        if( pHSerial != NULL )
+        {
+            pHSerial->end();
+        }
+        else
+        {
+            retVal = E_PARAM_NULL_STREAM;
+        }
+    }
+    else
+    {
+        if( pSSerial != NULL )
+        {
+            pSSerial->end();
+        }
+        else
+        {
+            retVal = E_PARAM_NULL_STREAM;
+        }
+    }
+    #endif // NOT on Arduino platform
 #endif // defined( __linux__ )
 
     return( retVal );
@@ -626,6 +1066,29 @@ void serialConnection::flushInput( void )
 {
 #if defined( __linux__ )
     tcflush( this->dev_fd, TCIFLUSH );
+#else // NOT defined( __linux__ )
+    #if defined(ARDUINO)
+    if( isHardwarePort )
+    {
+        if( pHSerial != NULL )
+        {
+            while( pHSerial->available() )
+            {
+                pHSerial->read();
+            }
+        }
+    }
+    else
+    {
+        if( pSSerial != NULL )
+        {
+            while( pSSerial->available() )
+            {
+                pSSerial->read();
+            }
+        }
+    }
+    #endif // NOT on Arduino platform
 #endif // defined( __linux__ )
 }
 
@@ -640,13 +1103,13 @@ void serialConnection::flushInput( void )
 int serialConnection::readline( char* pBuffer, int bufLen )
 {
     int retVal = E_OK;
+#if defined( __linux__ )
     char c;
     int ncount;
     int idx = 0;
     bool endLoop;
     bool retry;
 
-#if defined( __linux__ )
     struct timespec startTimeout;
     struct timespec current;
     clockid_t clk_id = CLOCK_MONOTONIC_COARSE;
@@ -748,6 +1211,47 @@ int serialConnection::readline( char* pBuffer, int bufLen )
         retVal = E_PARAM_NULL;
     }
 #else // NOT defined( __linux__ )
+    #if defined(ARDUINO)
+    if( pBuffer != NULL )
+    {
+        if( bufLen > 0 )
+        {
+            if( isHardwarePort )
+            {
+                if( pHSerial != NULL )
+                {
+                    retVal = pHSerial->readBytesUntil('\n',pBuffer,bufLen);
+                }
+                else
+                {
+                    retVal = E_PARAM_NULL_STREAM;
+                    sprintf(pBuffer, "FAIL %d (error %d)\n", __LINE__, retVal);
+                }
+            }
+            else
+            {
+                if( pSSerial != NULL )
+                {
+                    retVal = pSSerial->readBytesUntil('\n',pBuffer,bufLen);
+                }
+                else
+                {
+                    retVal = E_PARAM_NULL_STREAM;
+                    sprintf(pBuffer, "FAIL %d (error %d)\n", __LINE__, retVal);
+                }
+            }
+        }
+        else
+        {
+            retVal = E_PARAM_LENGTH;
+            sprintf(pBuffer, "FAIL %d (error %d)\n", __LINE__, retVal);
+        }
+    }
+    else
+    {
+        retVal = E_PARAM_NULL;
+    }
+    #endif // NOT on Arduino platform
 #endif // defined( __linux__ )
 
     return( retVal );
@@ -764,13 +1268,13 @@ int serialConnection::readline( char* pBuffer, int bufLen )
 int serialConnection::readBuffer( char* pBuffer, int bufLen )
 {
     int retVal = E_OK;
-    char c;
     int ncount;
+
+#if defined( __linux__ )
+    char c;
     int idx = 0;
     bool endLoop;
     bool retry;
-
-#if defined( __linux__ )
 
     struct timespec startTimeout;
     struct timespec current;
@@ -869,8 +1373,58 @@ int serialConnection::readBuffer( char* pBuffer, int bufLen )
     {
         retVal = E_PARAM_NULL;
     }
-
 #else // NOT defined( __linux__ )
+    #if defined(ARDUINO)
+    if( pBuffer != NULL )
+    {
+        if( bufLen > 0 )
+        {
+            if( isHardwarePort )
+            {
+                if( pHSerial != NULL )
+                {
+                    ncount = 0;
+                    while( pHSerial->available() && ncount < bufLen )
+                    {
+                        pBuffer[ncount] = pHSerial->read();
+                        ncount++;
+                    }
+                    retVal = ncount;
+                }
+                else
+                {
+                    retVal = E_PARAM_NULL_STREAM;
+                }
+            }
+            else
+            {
+                if( pSSerial != NULL )
+                {
+                    ncount = 0;
+                    while( pSSerial->available() && ncount < bufLen )
+                    {
+                        pBuffer[ncount] = pSSerial->read();
+                        ncount++;
+                    }
+                    retVal = ncount;
+                }
+                else
+                {
+                    retVal = E_PARAM_NULL_STREAM;
+                }
+            }
+        }
+        else
+        {
+            retVal = E_PARAM_LENGTH;
+            sprintf(pBuffer, "FAIL %d (error %d)\n", __LINE__, retVal);
+        }
+    }
+    else
+    {
+        retVal = E_PARAM_NULL;
+    }
+    #endif // NOT on Arduino platform
 #endif // defined( __linux__ )
 
     return( retVal );
@@ -888,38 +1442,60 @@ int serialConnection::ser_write( char* pBuffer, int wrLen )
 {
     int retVal = E_OK;
 
-#if defined( __linux__ )
-
     if( pBuffer != NULL )
     {
-        if( this->dev_fd > 0 )
+        if( wrLen >= 0 )
         {
-            if( wrLen >= 0 )
+            if( wrLen > 0 )
             {
-                if( wrLen > 0 )
+#if defined( __linux__ )
+                if( this->dev_fd > 0 )
                 {
                     retVal = write( this->dev_fd, pBuffer, wrLen );
                     tcflush( this->dev_fd, TCOFLUSH);
                     this->errorNum = errno;
                 }
-            }
-            else
-            {
-                retVal = E_PARAM_LENGTH;
+                else
+                {
+                    retVal = E_PARAM_NOFD;
+                }
+#else // NOT defined( __linux__ )
+    #if defined(ARDUINO)
+                if( isHardwarePort )
+                {
+                    if( pHSerial != NULL )
+                    {
+                        retVal = pHSerial->write( pBuffer, wrLen );
+                    }
+                    else
+                    {
+                        retVal = E_PARAM_NULL_STREAM;
+                    }
+                }
+                else
+                {
+                    if( pSSerial != NULL )
+                    {
+                        retVal = pSSerial->write( pBuffer, wrLen );
+                    }
+                    else
+                    {
+                        retVal = E_PARAM_NULL_STREAM;
+                    }
+                }
+    #endif // NOT on Arduino platform
+#endif // defined( __linux__ )
             }
         }
         else
         {
-            retVal = E_PARAM_NOFD;
+            retVal = E_PARAM_LENGTH;
         }
     }
     else
     {
         retVal = E_PARAM_NULL;
     }
-
-#else // NOT defined( __linux__ )
-#endif // defined( __linux__ )
 
     return( retVal );
 }
