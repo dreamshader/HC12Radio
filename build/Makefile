@@ -39,45 +39,54 @@ CXXDEBUG = -g
 #
 CXXFLAGS = -Wall -DHC12SERIAL
 CXXLIBSOFLAGS = -fPIC -shared 
-CXXRASPBERRY = -DRASPBERRY
 #
 SOURCEDIR = ../src
 LIBSRC = $(SOURCEDIR)/hc12Radio.cpp
+LIBINC = $(SOURCEDIR)/hc12Radio.h
 EXAMPLSRC = $(SOURCEDIR)/hc12Test.cpp
 EXAMPLNAME = hc12Test
-EXAMPLFLAGS = -I. -L ../build -l hc12Radio
+EXAMPLFLAGS = -I. -L ../build -l hc12Radio -l serialConnection
 LIBOBJ = hc12Radio.o
 SOLIBNAME = libhc12Radio.so
-STATLIBNAME = libhc12Radio.a
 #
+UNAME := $(shell uname -m)
+#
+
+ifeq ($(UNAME), x86_64)
+PIGPIO =
+CXXRASPBERRY =
+else
 PIGPIO = -lpigpio -lrt
-#
-all: lib-static lib-shared
+CXXRASPBERRY = -DRASPBERRY
+endif
 
-lib-static:
-	$(CXX) $(CXXFLAGS) $(CXXRASPBERRY) -c $(LIBSRC)
+all: $(SOLIBNAME) example
 
-lib-shared:
+
+$(SOLIBNAME): $(LIBSRC) $(LIBINC)
 	$(CXX) $(CXXFLAGS) $(CXXRASPBERRY) $(CXXDEBUG) $(CXXLIBSOFLAGS) -c $(LIBSRC)
 	$(CXX) -shared  -Wl,-soname,$(SOLIBNAME) -o $(SOLIBNAME) $(LIBOBJ)
 
-example: lib-static lib-shared
+example: $(SOLIBNAME) $(EXAMPLSRC)
 	$(CXX) -o $(EXAMPLNAME) $(CXXDEBUG) $(CXXRASPBERRY) $(EXAMPLSRC) $(EXAMPLFLAGS) $(PIGPIO)
 
 
-#g++ -fPIC -shared myclass.cc -o myclass.so
-#g++ class_user.cc -ldl -o class_user
-#-Wall
-#ar -cvq libctest.a ctest1.o ctest2.o
-#ar -t libctest.a
-#
-#main: libshared.so main.o
-    #$(CXX) -o main  main.o -L. -lshared
-#
-#libshared.so: shared.cpp
-    #$(CXX) -fPIC -c shared.cpp -o shared.o
-    #$(CXX) -shared  -Wl,-soname,libshared.so -o libshared.so shared.o
-#
-#clean:
+install: $(SOLIBNAME)
+	sudo install -m 0755 -d                        /usr/local/include
+	sudo install -m 0644 $(SOURCEDIR)/hc12Radio.h  /usr/local/include
+	sudo install -m 0755 -d                        /usr/local/lib
+	sudo install -m 0644 libhc12Radio.so           /usr/local/lib
+	$(LDCONFIG)
+
+uninstall:
+	sudo rm -f /usr/local/include/hc12Radio.h
+	sudo rm -f /usr/local/lib/libhc12Radio.so
+	$(LDCONFIG)
+
+
+
+
+
+clean:
     #$rm *.o *.so
 

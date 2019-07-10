@@ -282,9 +282,11 @@ struct _hc12_serial_param {
     struct termios oldtio;
     struct termios rawtio;
 #else // NOT defined(__linux__)
+    #if defined(ARDUINO)
     HardwareSerial *pHPort;
     SoftwareSerial *pSPort;
     bool            isHWPort;
+    #endif // defined(ARDUINO)
 #endif // defined(__linux__)
 unsigned int baud;
 unsigned char databit;
@@ -396,6 +398,7 @@ class hc12Radio {
 
     int enterCommandMode( void );
     int leaveCommandMode( void );
+
     int test( void );
     int setDefault( void );
 
@@ -407,23 +410,21 @@ class hc12Radio {
     int setTTMode( int mode );
     int setTPower( int power );
 
+// not applicable!
     int setParam( struct _hc12_param* pParam );
 
     int setSerialParam( int databits, char parity, int stopbits );
 
 /* ********************* */
 
-    uint32_t getBaud( void );
+    int getBaud( void );
     int getComChannel( void );
     int getTTMode( void );
     int getTPower( void );
-
     int getParam( void );
+    int getFWVersion( void );
 
     int getSerialParam( int *databits, char *parity, int *stopbits );
-
-    int getFWVersion( struct _hc12_fw_info* pFWInfo );
-
 
 
 };

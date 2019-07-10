@@ -431,7 +431,8 @@ int main( int argc, char *argv[] )
     else
     {
 
-#define PIN_SET    17 // GPIO17 = pin #11
+// #define PIN_SET    17 // GPIO17 = pin #11
+#define PIN_SET    HC12_NULLPIN
 
         if( (pRadio = new hc12Radio(PIN_SET)) != NULL )
         {
@@ -444,7 +445,12 @@ int main( int argc, char *argv[] )
                 pRadio->enterCommandMode();
 
                 pRadio->test();
+                pRadio->getFWVersion();
                 pRadio->getParam();
+                pRadio->getBaud();
+                pRadio->getComChannel();
+                pRadio->getTTMode();
+                pRadio->getTPower();
 
                 pRadio->leaveCommandMode();
 

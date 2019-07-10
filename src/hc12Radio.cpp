@@ -616,8 +616,9 @@ fprintf(stderr, "OK+ ?[=%c] ", pResult[4]);
 fprintf(stderr, "NO match!\n");
                         break;
 
-}
-                retVal = TRY_MORE_DATA;
+                }
+//                retVal = TRY_MORE_DATA;
+                retVal = NO_MORE_DATA;
             }
             else
             {
@@ -636,31 +637,33 @@ fprintf(stderr, "NO match!\n");
         }
         else
         {
-            if( (pResult = strcasestr( _ioBuffer, "HC")) != NULL )
+            if( (pResult = strcasestr( _ioBuffer, "HC-12")) != NULL )
             {
                 parsedValues = sscanf(pResult, HC12_RSP_GET_VERSION, 
                                          &major, &minor );
                 if( parsedValues == HC12_ARGS_RSP_GET_VERSION )
                 {
                     _commandStatus = HC12_CMD_STATUS_DONE;
-                    _currentCommand = HC12_CMD_CODE_NULL;
+//                    _currentCommand = HC12_CMD_CODE_NULL;
                 }
                 else
                 {
                     parsedValues = 0;
                     _commandStatus = HC12_CMD_STATUS_FAILED;
                 }
+                retVal = NO_MORE_DATA;
             }
             else
             {
-                do
-                {
-                    retVal = _connection->readBuffer( _ioBuffer,
-                          IO_BUFFER_SIZE-1 );
-                } while( retVal == E_BUFSPACE || retVal > 0 );
-    
+//                do
+//                {
+//                    retVal = _connection->readBuffer( _ioBuffer,
+//                          IO_BUFFER_SIZE-1 );
+//                } while( retVal == E_BUFSPACE || retVal > 0 );
+//    
                 parsedValues = 0;
                 _commandStatus = HC12_CMD_STATUS_FAILED;
+                retVal = NO_MORE_DATA;
             }
         }
 
@@ -823,8 +826,8 @@ fprintf(stderr, "NO match!\n");
             case HC12_CMD_CODE_GET_VERSION:
                 if( _responseArgs == HC12_ARGS_RSP_GET_VERSION )
                 {
-                    _moduleParam.hwInfo.major = major;
-                    _moduleParam.hwInfo.minor = minor;
+                    _moduleParam.hwInfo.major = major - '0';
+                    _moduleParam.hwInfo.minor = minor - '0';
                     _commandStatus = HC12_CMD_STATUS_DONE;
                     _currentCommand = HC12_CMD_CODE_NULL;
                     retVal = NO_MORE_DATA;
@@ -832,18 +835,19 @@ fprintf(stderr, "NO match!\n");
                 break;
             default:
                 _commandStatus = HC12_CMD_STATUS_UNKNOWN;
-                retVal = TRY_MORE_DATA;
+                retVal = NO_MORE_DATA;
+//                retVal = TRY_MORE_DATA;
                 break;
         }
 
 
         if( retVal == NO_MORE_DATA && _commandStatus >= 0 )
         {
-            do
-            {
-                retVal = _connection->readBuffer( _ioBuffer,
-                          IO_BUFFER_SIZE-1 );
-            } while( retVal == E_BUFSPACE || retVal > 0 );
+//            do
+//            {
+//                retVal = _connection->readBuffer( _ioBuffer,
+//                          IO_BUFFER_SIZE-1 );
+//            } while( retVal == E_BUFSPACE || retVal > 0 );
     
             _currentCommand = HC12_CMD_CODE_NULL;
             retVal = NO_MORE_DATA;
@@ -852,11 +856,11 @@ fprintf(stderr, "NO match!\n");
         {
             if( _commandStatus < 0 )
             {
-                do
-                {
-                    retVal = _connection->readBuffer( _ioBuffer,
-                              IO_BUFFER_SIZE-1 );
-                } while( retVal == E_BUFSPACE || retVal > 0 );
+//                do
+//                {
+//                    retVal = _connection->readBuffer( _ioBuffer,
+//                              IO_BUFFER_SIZE-1 );
+//                } while( retVal == E_BUFSPACE || retVal > 0 );
 
                 _currentCommand = HC12_CMD_CODE_NULL;
                 retVal = NO_MORE_DATA;
@@ -920,6 +924,10 @@ fprintf(stderr, "RESPONSE: %s\n", _ioBuffer);
                                 break;
                         }
                     }
+                    else
+                    {
+                        moreData = false;
+                    }
                 }
             }
 
@@ -961,9 +969,11 @@ int hc12Radio::connect( struct _hc12_serial_param *pParam )
 #if defined(__linux__)
             _moduleParam.serialParam.device = strdup( pParam->device );
 #else // NOT defined(__linux__)
+    #if defined(ARDUINO)
             _moduleParam.serialParam.pHPort = pParam->pHPort;
             _moduleParam.serialParam.pSPort = pParam->pSPort;
             _moduleParam.serialParam.isHWPort = pParam->isHWPort;
+    #endif // defined(ARDUINO)
 #endif // defined(__linux__)
             _moduleParam.serialParam.baud = pParam->baud;
             _moduleParam.serialParam.databit = pParam->databit;
@@ -980,6 +990,7 @@ int hc12Radio::connect( struct _hc12_serial_param *pParam )
                                         _moduleParam.serialParam.stopbits,
                                         _moduleParam.serialParam.handshake );
 #else // NOT defined(__linux__)
+    #if defined(ARDUINO)
         if( _moduleParam.serialParam.isHWPort )
         {
             retVal = _connection->ser_open( _moduleParam.serialParam.pHPort,
@@ -993,6 +1004,7 @@ int hc12Radio::connect( struct _hc12_serial_param *pParam )
             retVal = _connection->ser_open( _moduleParam.serialParam.pSPort,
                                             _moduleParam.serialParam.baud );
         }
+    #endif // defined(ARDUINO)
 #endif // defined(__linux__)
     }
     else
@@ -1053,6 +1065,10 @@ printf("enter Command mode\n");
 #if defined(RASPBERRY)
             gpioWrite(_moduleParam.setPin, HC12_SETPIN_CMD_MODE);
             usleep(60 * MILLISECONDS);
+#else // NOT defined(RASPBERRY)
+fprintf(stdout, "Please switch SET pin to GND and press <ENTER> when done.\n");
+fprintf(stdout, "Press <ESC> tp cancel operation\n");
+getchar();
 #endif // defined(RASPBERRY)
         }
 
@@ -1084,6 +1100,10 @@ printf("leave Command mode\n");
 #if defined(RASPBERRY)
             gpioWrite(_moduleParam.setPin, HC12_SETPIN_TT_MODE);
             usleep(100 * MILLISECONDS);
+#else // NOT defined(RASPBERRY)
+fprintf(stdout, "Please switch SET pin back to Vcc and press <ENTER> when done.\n");
+fprintf(stdout, "Press <ESC> tp cancel operation\n");
+getchar();
 #endif // defined(RASPBERRY)
         }
 
@@ -1145,9 +1165,11 @@ fprintf(stderr, "ERR init pigpio\n");
     memset( &_moduleParam.serialParam.oldtio, '\0', sizeof(struct termios) );
     memset( &_moduleParam.serialParam.rawtio, '\0', sizeof(struct termios) );
 #else // NOT defined(__linux__)
+    #if defined(ARDUINO)
     _moduleParam.serialParam.pHPort = NULL;
     _moduleParam.serialParam.pSPort = NULL;
     _moduleParam.serialParam.isHWPort = false;
+    #endif // defined(ARDUINO)
 #endif // defined(__linux__)
 
     _moduleParam.serialParam.baud = HC12_DEFAULT_BAUD;
@@ -1812,9 +1834,9 @@ int hc12Radio::setSerialParam( int databits, char parity, int stopbits )
  * return HC12_ERR_OK on succes, otherwise an error code
  ------------------------------------------------------------------------------
 */
-uint32_t hc12Radio::getBaud( void )
+int hc12Radio::getBaud( void )
 {
-    uint32_t retVal = (uint32_t) HC12_ERR_OK;
+    int retVal = HC12_ERR_OK;
 
     if( _currOpMode == HC12_OP_CMD_MODE )
     {
@@ -1826,12 +1848,6 @@ uint32_t hc12Radio::getBaud( void )
         if( (retVal = sendRequest()) == E_OK )
         {
             _commandStatus = HC12_CMD_STATUS_ACTIVE;
-
-            if( sscanf( _ioBuffer, HC12_RSP_GET_BAUD, 
-                        (int*) &retVal) != HC12_ARGS_RSP_GET_BAUD )
-            {
-                retVal = HC12_ERR_ARGS;
-            }
         }
         else
         {
@@ -1871,11 +1887,6 @@ int hc12Radio::getComChannel( void )
         if( (retVal = sendRequest()) == E_OK )
         {
             _commandStatus = HC12_CMD_STATUS_ACTIVE;
-            if( sscanf( _ioBuffer, HC12_RSP_GET_CHANNEL, 
-                        (int*) &retVal) != HC12_ARGS_RSP_GET_CHANNEL )
-            {
-                retVal = HC12_ERR_ARGS;
-            }
         }
         else
         {
@@ -1916,11 +1927,6 @@ int hc12Radio::getTTMode( void )
         if( (retVal = sendRequest()) == E_OK )
         {
             _commandStatus = HC12_CMD_STATUS_ACTIVE;
-            if( sscanf( _ioBuffer, HC12_RSP_GET_TTMODE, 
-                        (int*) &retVal) != HC12_ARGS_RSP_GET_TTMODE )
-            {
-                retVal = HC12_ERR_ARGS;
-            }
         }
         else
         {
@@ -1961,11 +1967,6 @@ int hc12Radio::getTPower( void )
         if( (retVal = sendRequest()) == E_OK )
         {
             _commandStatus = HC12_CMD_STATUS_ACTIVE;
-            if( sscanf( _ioBuffer, HC12_RSP_GET_POWER, 
-                        (int*) &retVal) != HC12_ARGS_RSP_GET_POWER )
-            {
-                retVal = HC12_ERR_ARGS;
-            }
         }
         else
         {
@@ -1998,9 +1999,6 @@ int hc12Radio::getTPower( void )
 int hc12Radio::getParam( void )
 {
     int retVal = HC12_ERR_OK;
-    int sBaud, sChan, sPower, sTTMode;
-    char *pRespBegin;
-
 
     if( _currOpMode == HC12_OP_CMD_MODE )
     {
@@ -2011,27 +2009,7 @@ int hc12Radio::getParam( void )
 
         if( (retVal = sendRequest()) == E_OK )
         {
-
             _commandStatus = HC12_CMD_STATUS_ACTIVE;
-            if( (pRespBegin = strcasestr( _ioBuffer, "OK")) != NULL )
-            {
-//                if( sscanf( _ioBuffer, HC12_RSP_GET_PARAM, &sBaud, 
-                if( sscanf( pRespBegin, HC12_RSP_GET_PARAM, &sBaud, 
-                        &sChan, &sPower, &sTTMode) == HC12_ARGS_RSP_GET_PARAM )
-                {
-                    retVal = HC12_ERR_OK;
-
-                    _moduleParam.comChannel = sChan;
-                    _moduleParam.ttMode = sTTMode;
-                    _moduleParam.power = sPower;
-
-                    _moduleParam.serialParam.baud = sBaud;
-                }
-                else
-                {
-                    retVal = HC12_ERR_ARGS;
-                }
-            }
         }
         else
         {
@@ -2082,7 +2060,7 @@ int hc12Radio::getSerialParam( int *databits, char *parity, int *stopbits )
 
 /* 
  ------------------------------------------------------------------------------
- * int hc12Radio::getFWVersion( struct _hc12_fw_info* pFWInfo )
+ * int hc12Radio::getFWVersion( void )
  *
  * AT+V
  * Request firmware version information from the module.
@@ -2091,12 +2069,10 @@ int hc12Radio::getSerialParam( int *databits, char *parity, int *stopbits )
  * return HC12_ERR_OK on succes, otherwise an error code
  ------------------------------------------------------------------------------
 */
-int hc12Radio::getFWVersion( struct _hc12_fw_info* pFWInfo )
+int hc12Radio::getFWVersion( void )
 {
     int retVal = HC12_ERR_OK;
 
-    if( pFWInfo != NULL )
-    {
         if( _currOpMode == HC12_OP_CMD_MODE )
         {
             sprintf( _ioBuffer, HC12_CMD_GET_VERSION );
@@ -2107,16 +2083,6 @@ int hc12Radio::getFWVersion( struct _hc12_fw_info* pFWInfo )
             if( (retVal = sendRequest()) == E_OK )
             {
                 _commandStatus = HC12_CMD_STATUS_ACTIVE;
-                if( sscanf( _ioBuffer, HC12_RSP_GET_VERSION, 
-                         &pFWInfo->major, &pFWInfo->minor ) ==
-                          HC12_ARGS_RSP_GET_VERSION )
-                {
-                    retVal = HC12_ERR_OK;
-                }
-                else
-                {
-                    retVal = HC12_ERR_ARGS;
-                }
             }
             else
             {
@@ -2127,11 +2093,6 @@ int hc12Radio::getFWVersion( struct _hc12_fw_info* pFWInfo )
         {
             retVal = HC12_ERR_OP_MODE;
         }
-    }
-    else
-    {
-        retVal = HC12_ERR_NULLP;
-    }
 
     return( retVal );
 }
