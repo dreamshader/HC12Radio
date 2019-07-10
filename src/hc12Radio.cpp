@@ -961,7 +961,9 @@ int hc12Radio::connect( struct _hc12_serial_param *pParam )
 #if defined(__linux__)
             _moduleParam.serialParam.device = strdup( pParam->device );
 #else // NOT defined(__linux__)
-            _moduleParam.serialParam.pPort = pParam->pPort;
+            _moduleParam.serialParam.pHPort = pParam->pHPort;
+            _moduleParam.serialParam.pSPort = pParam->pSPort;
+            _moduleParam.serialParam.isHWPort = pParam->isHWPort;
 #endif // defined(__linux__)
             _moduleParam.serialParam.baud = pParam->baud;
             _moduleParam.serialParam.databit = pParam->databit;
@@ -972,15 +974,26 @@ int hc12Radio::connect( struct _hc12_serial_param *pParam )
 
 #if defined(__linux__)
         retVal = _connection->ser_open( _moduleParam.serialParam.device,
-#else // NOT defined(__linux__)
-        retVal = _connection->ser_open( _moduleParam.serialParam.pPort,
-#endif // defined(__linux__)
-
                                         _moduleParam.serialParam.baud,
                                         _moduleParam.serialParam.databit,
                                         _moduleParam.serialParam.parity,
                                         _moduleParam.serialParam.stopbits,
                                         _moduleParam.serialParam.handshake );
+#else // NOT defined(__linux__)
+        if( _moduleParam.serialParam.isHWPort )
+        {
+            retVal = _connection->ser_open( _moduleParam.serialParam.pHPort,
+                                            _moduleParam.serialParam.baud,
+                                            _moduleParam.serialParam.databit,
+                                            _moduleParam.serialParam.parity,
+                                            _moduleParam.serialParam.stopbits );
+        }
+        else
+        {
+            retVal = _connection->ser_open( _moduleParam.serialParam.pSPort,
+                                            _moduleParam.serialParam.baud );
+        }
+#endif // defined(__linux__)
     }
     else
     {
@@ -1132,7 +1145,9 @@ fprintf(stderr, "ERR init pigpio\n");
     memset( &_moduleParam.serialParam.oldtio, '\0', sizeof(struct termios) );
     memset( &_moduleParam.serialParam.rawtio, '\0', sizeof(struct termios) );
 #else // NOT defined(__linux__)
-    _moduleParam.serialParam.pPort = NULL;
+    _moduleParam.serialParam.pHPort = NULL;
+    _moduleParam.serialParam.pSPort = NULL;
+    _moduleParam.serialParam.isHWPort = false;
 #endif // defined(__linux__)
 
     _moduleParam.serialParam.baud = HC12_DEFAULT_BAUD;

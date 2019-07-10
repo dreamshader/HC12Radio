@@ -34,7 +34,6 @@
     #endif
 
     #include "SoftwareSerial.h"
-    #include "Stream.h"
 
 #else // NOT on Arduino platform
 
@@ -283,7 +282,9 @@ struct _hc12_serial_param {
     struct termios oldtio;
     struct termios rawtio;
 #else // NOT defined(__linux__)
-    Stream *pPort;
+    HardwareSerial *pHPort;
+    SoftwareSerial *pSPort;
+    bool            isHWPort;
 #endif // defined(__linux__)
 unsigned int baud;
 unsigned char databit;
