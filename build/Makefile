@@ -42,11 +42,11 @@ CXXLIBSOFLAGS = -fPIC -shared
 CXXRASPBERRY = -DRASPBERRY
 #
 SOURCEDIR = ../src
-LIBSRC = $(SOURCEDIR)/serialConnection.cpp $(SOURCEDIR)/hc12Radio.cpp
+LIBSRC = $(SOURCEDIR)/hc12Radio.cpp
 EXAMPLSRC = $(SOURCEDIR)/hc12Test.cpp
 EXAMPLNAME = hc12Test
 EXAMPLFLAGS = -I. -L ../build -l hc12Radio
-LIBOBJ = serialConnection.o hc12Radio.o
+LIBOBJ = hc12Radio.o
 SOLIBNAME = libhc12Radio.so
 STATLIBNAME = libhc12Radio.a
 #
