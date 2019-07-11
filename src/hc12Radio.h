@@ -94,9 +94,11 @@ using namespace std;
 
 #if defined(ARDUINO)
     #define IO_BUFFER_SIZE         64
+    #define LOG_BUFFER_SIZE        60
 #else // NOT on Arduino platform
 //    #define IO_BUFFER_SIZE        128
     #define IO_BUFFER_SIZE         64
+    #define LOG_BUFFER_SIZE       120
 #endif // defined(ARDUINO)
 
 #define HC12_INTERFACE_HW           2
@@ -271,10 +273,6 @@ using namespace std;
 #define HC12_DUMP_FW_INFO           2
 #define HC12_DUMP_HC12_PARAM        3
 
-void dumpSerialParam( struct _hc12_serial_param *pData );
-void dumpFWInfo( struct _hc12_fw_info *pData );
-void dumpHC12Param( struct _hc12_param *pData );
-
 struct _hc12_serial_param {
 #if defined(__linux__)
     char *device;
@@ -292,7 +290,9 @@ unsigned int baud;
 unsigned char databit;
 unsigned char parity;
 unsigned char stopbits;
+#if defined(__linux__)
 unsigned char handshake;
+#endif // defined(__linux__)
 };
 
 struct _hc12_fw_info {
@@ -322,16 +322,6 @@ void dumpSerialParam( struct _hc12_serial_param *pData );
 void dumpFWInfo( struct _hc12_fw_info *pData );
 void dumpHC12Param( struct _hc12_param *pData );
 #endif // defined(__linux__)
-
-
-bool isValidBaud( uint32_t baud );
-bool isValidParity( char parity );
-bool isValidDatabits( int databits );
-bool isValidStopbits( int stopbits );
-bool isValidHandshake( int handshake );
-bool isValidTTMode( int mode );
-bool isValidPower( int power );
-bool isValidChannel( int channel );
 
 
 class hc12Radio {
@@ -381,6 +371,19 @@ class hc12Radio {
     hc12Radio(int setPin = HC12_DEFAULT_SET_PIN,
               int powerPin = HC12_DEFAULT_POW_PIN);
 #endif // defined(ARDUINO)
+
+
+    bool isValidBaud( uint32_t baud );
+    bool isValidParity( char parity );
+    bool isValidDatabits( int databits );
+    bool isValidStopbits( int stopbits );
+#if defined(__linux__)
+    bool isValidHandshake( int handshake );
+#endif // defined(__linux__)
+
+    bool isValidTTMode( int mode );
+    bool isValidPower( int power );
+    bool isValidChannel( int channel );
 
     void dump( int what );
 

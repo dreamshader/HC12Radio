@@ -22,6 +22,33 @@
 
 #include "hc12Radio.h"
 
+
+#define DEBUG_LEVEL_0         0
+#define DEBUG_LEVEL_1         1
+
+static int hc12DebugLevel = DEBUG_LEVEL_0;
+
+char hc12LogBuffer[LOG_BUFFER_SIZE];
+
+void doLog(int level)
+{
+    if( level >= hc12DebugLevel )
+    {
+        switch(level)
+        {
+            case DEBUG_LEVEL_0:
+                break;
+            case DEBUG_LEVEL_1:
+#if defined(__linux__)
+                fprintf(stderr, "%s", hc12LogBuffer);
+#else
+                Serial.print(hc12LogBuffer);
+#endif // defined(__linux__)
+                break;
+        }
+    }
+}
+
 #if defined(__linux__)
 
 void dumpSerialParam( struct _hc12_serial_param *pData )
@@ -80,15 +107,16 @@ void dumpHC12Param( struct _hc12_param *pData )
 
 #endif // defined(__linux__)
 
+
 /*
  ***********************************************************************
- | bool isValidBaud( uint32_t baud )
+ | bool hc12Radio::isValidBaud( uint32_t baud )
  |
  | check baudrate for validity
  | return true if valid otherwise false
  ***********************************************************************
 */
-bool isValidBaud( uint32_t baud )
+bool hc12Radio::isValidBaud( uint32_t baud )
 {
     bool retVal = false;
 
@@ -114,13 +142,13 @@ bool isValidBaud( uint32_t baud )
 
 /*
  ***********************************************************************
- | bool isValidParity( char parity )
+ | bool hc12Radio::isValidParity( char parity )
  |
  | check parity for validity
  | return true if valid otherwise false
  ***********************************************************************
 */
-bool isValidParity( char parity )
+bool hc12Radio::isValidParity( char parity )
 {
     bool retVal = false;
 
@@ -141,13 +169,13 @@ bool isValidParity( char parity )
 
 /*
  ***********************************************************************
- | bool isValidDatabits( int databits )
+ | bool hc12Radio::isValidDatabits( int databits )
  |
  | check databits for validity
  | return true if valid otherwise false
  ***********************************************************************
 */
-bool isValidDatabits( int databits )
+bool hc12Radio::isValidDatabits( int databits )
 {
     bool retVal = false;
 
@@ -169,13 +197,13 @@ bool isValidDatabits( int databits )
 
 /*
  ***********************************************************************
- | bool isValidStopbits( int stopbits )
+ | bool hc12Radio::isValidStopbits( int stopbits )
  |
  | check stopbits for validity
  | return true if valid otherwise false
  ***********************************************************************
 */
-bool isValidStopbits( int stopbits )
+bool hc12Radio::isValidStopbits( int stopbits )
 {
     bool retVal = false;
 
@@ -194,16 +222,16 @@ bool isValidStopbits( int stopbits )
     return( retVal );
 }
 
-
+#if defined(__linux__)
 /*
  ***********************************************************************
- | bool isValidHandshake( int stopbits )
+ | bool hc12Radio::isValidHandshake( int stopbits )
  |
  | check handshake for validity
  | return true if valid otherwise false
  ***********************************************************************
 */
-bool isValidHandshake( int handshake )
+bool hc12Radio::isValidHandshake( int handshake )
 {
     bool retVal = false;
 
@@ -223,16 +251,17 @@ bool isValidHandshake( int handshake )
 
     return( retVal );
 }
+#endif // defined(__linux__)
 
 /*
  ***********************************************************************
- | bool isValidTTMode( int mode )
+ | bool hc12Radio::isValidTTMode( int mode )
  |
  | check transparent transmission mode for validity
  | return true if valid otherwise false
  ***********************************************************************
 */
-bool isValidTTMode( int mode )
+bool hc12Radio::isValidTTMode( int mode )
 {
     bool retVal = false;
 
@@ -246,13 +275,13 @@ bool isValidTTMode( int mode )
 
 /*
  ***********************************************************************
- | bool isValidPower( int power )
+ | bool hc12Radio::isValidPower( int power )
  |
  | check power mode for validity
  | return true if valid otherwise false
  ***********************************************************************
 */
-bool isValidPower( int power )
+bool hc12Radio::isValidPower( int power )
 {
     bool retVal = false;
 
@@ -266,13 +295,13 @@ bool isValidPower( int power )
 
 /*
  ***********************************************************************
- | bool isValidChannel( int channel )
+ | bool hc12Radio::isValidChannel( int channel )
  |
  | check power mode for validity
  | return true if valid otherwise false
  ***********************************************************************
 */
-bool isValidChannel( int channel )
+bool hc12Radio::isValidChannel( int channel )
 {
     bool retVal = false;
 
@@ -471,149 +500,181 @@ int hc12Radio::parseResponse( void )
                 switch(pResult[3])
                 {
                     case 'B':
-fprintf(stderr, "OK+B ...");
+sprintf(hc12LogBuffer, "OK+B ...");
+doLog(DEBUG_LEVEL_1);
                         parsedValues = sscanf(pResult, HC12_RSP_GET_BAUD, 
                                          &baud);
                         if( parsedValues == HC12_ARGS_RSP_GET_BAUD )
                         {
-fprintf(stderr, "match!\n");
+sprintf(hc12LogBuffer, "match!\n");
+doLog(DEBUG_LEVEL_1);
                         }
                         else
                         {
-fprintf(stderr, "NO match!\n");
+sprintf(hc12LogBuffer, "NO match!\n");
+doLog(DEBUG_LEVEL_1);
                             _commandStatus = HC12_CMD_RESPONSE_UNKNOWN;
                         }
                         break;
                     case 'R':
-fprintf(stderr, "OK+R ");
+sprintf(hc12LogBuffer, "OK+R ");
+doLog(DEBUG_LEVEL_1);
                         switch(pResult[4])
                         {
                             case 'C':
-fprintf(stderr, " C ...");
+sprintf(hc12LogBuffer, " C ...");
+doLog(DEBUG_LEVEL_1);
                                 parsedValues = sscanf(pResult, 
                                          HC12_RSP_GET_CHANNEL, &channel );
                                 if( parsedValues == HC12_ARGS_RSP_GET_CHANNEL )
                                 {
-fprintf(stderr, "match!\n");
+sprintf(hc12LogBuffer, "match!\n");
+doLog(DEBUG_LEVEL_1);
                                 }
                                 else
                                 {
-fprintf(stderr, "NO match!\n");
+sprintf(hc12LogBuffer, "NO match!\n");
+doLog(DEBUG_LEVEL_1);
                                     _commandStatus = HC12_CMD_RESPONSE_UNKNOWN;
                                 }
                                 break;
                             case 'P':
-fprintf(stderr, " P ...");
+sprintf(hc12LogBuffer, " P ...");
+doLog(DEBUG_LEVEL_1);
                                 parsedValues = sscanf(pResult, 
                                          HC12_RSP_GET_POWER, &powerDB );
                                 if( parsedValues == HC12_ARGS_RSP_GET_POWER )
                                 {
                                     power = powerDB2Mode(powerDB);
-fprintf(stderr, "match!\n");
+sprintf(hc12LogBuffer, "match!\n");
+doLog(DEBUG_LEVEL_1);
                                 }
                                 else
                                 {
-fprintf(stderr, "NO match!\n");
+sprintf(hc12LogBuffer, "NO match!\n");
+doLog(DEBUG_LEVEL_1);
                                     _commandStatus = HC12_CMD_RESPONSE_UNKNOWN;
                                 }
                                 break;
                             default:
-fprintf(stderr, " ?[=%c] ...", pResult[4]);
+sprintf(hc12LogBuffer, " ?[=%c] ...", pResult[4]);
+doLog(DEBUG_LEVEL_1);
                                 _commandStatus = HC12_CMD_RESPONSE_UNKNOWN;
-fprintf(stderr, "NO match!\n");
+sprintf(hc12LogBuffer, "NO match!\n");
+doLog(DEBUG_LEVEL_1);
                                 break;
                         }
                         break;
                     case 'F':
-fprintf(stderr, "OK+F ...");
+sprintf(hc12LogBuffer, "OK+F ...");
+doLog(DEBUG_LEVEL_1);
                         parsedValues = sscanf(pResult, HC12_RSP_GET_TTMODE, 
                                          &ttMode );
                         if( parsedValues == HC12_ARGS_RSP_GET_TTMODE )
                         {
-fprintf(stderr, "match!\n");
+sprintf(hc12LogBuffer, "match!\n");
+doLog(DEBUG_LEVEL_1);
                         }
                         else
                         {
-fprintf(stderr, "NO match!\n");
+sprintf(hc12LogBuffer, "NO match!\n");
+doLog(DEBUG_LEVEL_1);
                             _commandStatus = HC12_CMD_RESPONSE_UNKNOWN;
                         }
                         break;
                     case 'C':
-fprintf(stderr, "OK+C ...");
+sprintf(hc12LogBuffer, "OK+C ...");
+doLog(DEBUG_LEVEL_1);
                         parsedValues = sscanf(pResult, HC12_RSP_SET_CHANNEL, 
                                          &channel );
                         if( parsedValues == HC12_ARGS_RSP_SET_CHANNEL )
                         {
-fprintf(stderr, "match!\n");
+sprintf(hc12LogBuffer, "match!\n");
+doLog(DEBUG_LEVEL_1);
                         }
                         else
                         {
-fprintf(stderr, "NO match!\n");
+sprintf(hc12LogBuffer, "NO match!\n");
+doLog(DEBUG_LEVEL_1);
                             _commandStatus = HC12_CMD_RESPONSE_UNKNOWN;
                         }
                         break;
                     case 'D':
-fprintf(stderr, "OK+D ...");
+sprintf(hc12LogBuffer, "OK+D ...");
+doLog(DEBUG_LEVEL_1);
                         parsedValues = strncmp( pResult, HC12_RSP_SET_DEFAULT,
                                strlen(HC12_RSP_SET_DEFAULT) );
 
                         if( parsedValues == HC12_ARGS_RSP_SET_DEFAULT )
                         {
-fprintf(stderr, "match!\n");
+sprintf(hc12LogBuffer, "match!\n");
+doLog(DEBUG_LEVEL_1);
                         }
                         else
                         {
-fprintf(stderr, "NO match!\n");
+sprintf(hc12LogBuffer, "NO match!\n");
+doLog(DEBUG_LEVEL_1);
                             _commandStatus = HC12_CMD_RESPONSE_UNKNOWN;
                         }
                         break;
                     case 'S':
-fprintf(stderr, "OK+S ...");
+sprintf(hc12LogBuffer, "OK+S ...");
+doLog(DEBUG_LEVEL_1);
                         parsedValues = strncmp( pResult, HC12_RSP_SLEEP,
                                strlen(HC12_RSP_SLEEP) );
                         if( parsedValues == HC12_ARGS_RSP_SLEEP )
                         {
-fprintf(stderr, "match!\n");
+sprintf(hc12LogBuffer, "match!\n");
+doLog(DEBUG_LEVEL_1);
                         }
                         else
                         {
-fprintf(stderr, "NO match!\n");
+sprintf(hc12LogBuffer, "NO match!\n");
+doLog(DEBUG_LEVEL_1);
                             _commandStatus = HC12_CMD_RESPONSE_UNKNOWN;
                         }
                         break;
                     case 'P':
-fprintf(stderr, "OK+P ...");
+sprintf(hc12LogBuffer, "OK+P ...");
+doLog(DEBUG_LEVEL_1);
                         parsedValues = sscanf(pResult, HC12_RSP_SET_POWER, 
                                          &power );
                         if( parsedValues == HC12_ARGS_RSP_SET_POWER )
                         {
                             powerDB = powerMode2DB(power);
-fprintf(stderr, "match!\n");
+sprintf(hc12LogBuffer, "match!\n");
+doLog(DEBUG_LEVEL_1);
                         }
                         else
                         {
-fprintf(stderr, "NO match!\n");
+sprintf(hc12LogBuffer, "NO match!\n");
+doLog(DEBUG_LEVEL_1);
                             _commandStatus = HC12_CMD_RESPONSE_UNKNOWN;
                         }
                         break;
                     case 'U':
-fprintf(stderr, "OK+U ...");
+sprintf(hc12LogBuffer, "OK+U ...");
+doLog(DEBUG_LEVEL_1);
                         parsedValues = sscanf(pResult, HC12_RSP_SET_SERIAL, 
                                          &databits, &parity, &stopbits );
                         if( parsedValues == HC12_ARGS_RSP_SET_SERIAL )
                         {
-fprintf(stderr, "match!\n");
+sprintf(hc12LogBuffer, "match!\n");
+doLog(DEBUG_LEVEL_1);
                         }
                         else
                         {
-fprintf(stderr, "NO match!\n");
+sprintf(hc12LogBuffer, "NO match!\n");
+doLog(DEBUG_LEVEL_1);
                             _commandStatus = HC12_CMD_RESPONSE_UNKNOWN;
                         }
                         break;
                     default:
-fprintf(stderr, "OK+ ?[=%c] ", pResult[4]);
+sprintf(hc12LogBuffer, "OK+ ?[=%c] ", pResult[4]);
+doLog(DEBUG_LEVEL_1);
                         _commandStatus = HC12_CMD_RESPONSE_UNKNOWN;
-fprintf(stderr, "NO match!\n");
+sprintf(hc12LogBuffer, "NO match!\n");
+doLog(DEBUG_LEVEL_1);
                         break;
 
                 }
@@ -901,7 +962,8 @@ printf("command >%s", _ioBuffer);
             {
                 retVal = getResponse();
 
-fprintf(stderr, "RESPONSE: %s\n", _ioBuffer);
+sprintf(hc12LogBuffer, "RESPONSE: %s\n", _ioBuffer);
+doLog(DEBUG_LEVEL_1);
 
                 if(retVal == E_READ_TIMEOUT )
                 {
@@ -929,12 +991,14 @@ fprintf(stderr, "RESPONSE: %s\n", _ioBuffer);
 
             if( (retVal = _commandStatus) == HC12_CMD_STATUS_DONE )
             {
-fprintf(stderr, "Command complete ...\n");
+sprintf(hc12LogBuffer, "Command complete ...\n");
+doLog(DEBUG_LEVEL_1);
                 retVal = E_OK;
             }
             else
             {
-fprintf(stderr, "Command terminates with error %d\n", retVal);
+sprintf(hc12LogBuffer, "Command terminates with error %d\n", retVal);
+doLog(DEBUG_LEVEL_1);
             }
         }
     }
@@ -975,7 +1039,9 @@ int hc12Radio::connect( struct _hc12_serial_param *pParam )
             _moduleParam.serialParam.databit = pParam->databit;
             _moduleParam.serialParam.parity = pParam->parity;
             _moduleParam.serialParam.stopbits = pParam->stopbits;
+#if defined(__linux__)
             _moduleParam.serialParam.handshake = pParam->handshake;
+#endif // defined(__linux__)
         }
 
 #if defined(__linux__)
@@ -1128,7 +1194,8 @@ void hc12Radio::init( void )
         if (gpioInitialise() < 0)
         {
             _status = HC12_ERR_INIT_PIGPIO;
-fprintf(stderr, "ERR init pigpio\n");
+sprintf(hc12LogBuffer, "ERR init pigpio\n");
+doLog(DEBUG_LEVEL_1);
         }
         else
         {
@@ -1222,7 +1289,8 @@ int hc12Radio::test( void )
         else
         {
             _commandStatus = HC12_CMD_STATUS_FAILED;
-//fprintf(stderr, "ERR send request failed [%d]\n", retVal);
+//sprintf(hc12LogBuffer, "ERR send request failed [%d]\n", retVal);
+// doLog(DEBUG_LEVEL_1);
         }
 
     }

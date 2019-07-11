@@ -142,7 +142,7 @@ void set_defaults( struct _hc12_serial_param *ctl_param )
 {
     if( ctl_param != NULL )
     {
-        ctl_param->device = (char*) COMPORT;
+        ctl_param->device = strdup((char*) COMPORT);
         ctl_param->baud = 9600;
         ctl_param->databit = 8;
         ctl_param->parity = 'N';
@@ -294,82 +294,46 @@ void get_arguments ( int argc, char **argv, struct _hc12_serial_param *ctl_param
  ------------------------------------------------------------------------------
 */
 
-int check_param( struct _hc12_serial_param *ctl_param )
+int check_param(  hc12Radio* pRadio, struct _hc12_serial_param *ctl_param )
 {
     int fail = 0;
 
-    if( ctl_param != NULL )
+    if( pRadio != NULL && ctl_param != NULL )
     {
         if( access( ctl_param->device, F_OK) == 0)
         {
-            switch( ctl_param->baud )
+            if( !pRadio->isValidBaud( ctl_param->baud ) )
             {
-                case     50:
-                case     75:
-                case    110:
-                case    134:
-                case    150:
-                case    200:
-                case    300:
-                case    600 :
-                case   1200:
-                case   1800:
-                case   2400:
-                case   4800:
-                case   9600:
-                case  19200:
-                case  38400:
-                case  57600:
-                case 115200:
-                case 230400:
-                case 460800:
-                    break;
-                default:
-                    fail = E_BAUDRATE;
+                fail = E_BAUDRATE;
             }
-
-            switch( ctl_param->databit )
+            else
             {
-                case 5:
-                case 6:
-                case 7:
-                case 8:
-                    break;
-                default:
+                if( !pRadio->isValidDatabits( ctl_param->databit ) )
+                {
                     fail = E_DATABIT;
-            }
-
-            switch( ctl_param->parity )
-            {
-                case 'o':
-                case 'O':
-                case 'e':
-                case 'E':
-                case 'n':
-                case 'N':
-                    break;
-                default:
-                    fail = E_PARITY;
-            }
-
-            switch( ctl_param->stopbits )
-            {
-                case 1:
-                case 2:
-                    break;
-                default:
-                    fail = E_STOPPBITS;
-            }
-
-            switch( ctl_param->handshake )
-            {
-                case 'n':
-                case 'N':
-                case 'x':
-                case 'X':
-                    break;
-                default:
-                    fail = E_HANDSHAKE;
+                }
+                else
+                {
+                    if( !pRadio->isValidParity( ctl_param->parity ) )
+                    {
+                        fail = E_PARITY;
+                    }
+                    else
+                    {
+                        if( !pRadio->isValidStopbits( ctl_param->stopbits ) )
+                        {
+                            fail = E_STOPPBITS;
+                        }
+                        else
+                        {
+                            if( !pRadio->isValidHandshake( 
+                                                ctl_param->handshake ) )
+                            {
+                                fail = E_HANDSHAKE;
+                            }
+                        }
+                    }
+                }
             }
         }
         else
@@ -401,7 +365,40 @@ int main( int argc, char *argv[] )
     set_defaults( &ctl_param );
     get_arguments ( argc, argv, &ctl_param, &mystic);
 
-    if( (failed = check_param( &ctl_param )) != 0 )
+// #define PIN_SET    17 // GPIO17 = pin #11
+#define PIN_SET    HC12_NULLPIN
+
+    if( (pRadio = new hc12Radio(PIN_SET)) != NULL )
+    {
+        if( (failed = check_param( pRadio, &ctl_param )) == HC12_ERR_OK )
+        {
+            if( (retVal = pRadio->connect(&ctl_param)) != HC12_ERR_OK )
+            {
+                fprintf(stderr, "[%d]Connect failed\n", retVal );
+            }
+            else
+            {
+                pRadio->enterCommandMode();
+
+                pRadio->test();
+                pRadio->getFWVersion();
+                pRadio->getParam();
+                pRadio->getBaud();
+                pRadio->getComChannel();
+                pRadio->getTTMode();
+                pRadio->getTPower();
+
+                pRadio->leaveCommandMode();
+
+                retVal = pRadio->disconnect();
+            }
+
+            pRadio->dump( HC12_DUMP_SERIAL_PARAM );
+            pRadio->dump( HC12_DUMP_FW_INFO );
+            pRadio->dump( HC12_DUMP_HC12_PARAM );
+        }
+    }
+    else
     {
         switch(failed)
         {
@@ -421,46 +418,12 @@ int main( int argc, char *argv[] )
                 fprintf(stderr, "Invalid handshake\n");
                 break;
             case E_DEVICE:
-                fprintf(stderr, "Invalid device\n");
-                break;
+                fprintf(stderr, "cannot access device <%s>\n",
+                    ctl_param.device == (char*) NULL?"NULL":ctl_param.device);
+                    break;
             case E_NULL:
                 fprintf(stderr, "cannot check parameter -> NULL\n");
                 break;
-        }
-    }
-    else
-    {
-
-// #define PIN_SET    17 // GPIO17 = pin #11
-#define PIN_SET    HC12_NULLPIN
-
-        if( (pRadio = new hc12Radio(PIN_SET)) != NULL )
-        {
-            if( (retVal = pRadio->connect(&ctl_param)) != E_OK )
-            {
-                fprintf(stderr, "[%d]Connect failed\n", retVal );
-            }
-            else
-            {
-                pRadio->enterCommandMode();
-
-                pRadio->test();
-                pRadio->getFWVersion();
-                pRadio->getParam();
-                pRadio->getBaud();
-                pRadio->getComChannel();
-                pRadio->getTTMode();
-                pRadio->getTPower();
-
-                pRadio->leaveCommandMode();
-
-                retVal = pRadio->disconnect();
-
-            }
-
-            pRadio->dump( HC12_DUMP_SERIAL_PARAM );
-            pRadio->dump( HC12_DUMP_FW_INFO );
-            pRadio->dump( HC12_DUMP_HC12_PARAM );
         }
     }
 
