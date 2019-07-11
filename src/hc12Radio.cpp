@@ -655,12 +655,13 @@ fprintf(stderr, "NO match!\n");
             }
             else
             {
-//                do
-//                {
-//                    retVal = _connection->readBuffer( _ioBuffer,
-//                          IO_BUFFER_SIZE-1 );
-//                } while( retVal == E_BUFSPACE || retVal > 0 );
-//    
+// look here if application hangs
+                while( retVal == E_BUFSPACE || retVal > 0 )
+                {
+                    retVal = _connection->readBuffer( _ioBuffer,
+                          IO_BUFFER_SIZE-1 );
+                };
+    
                 parsedValues = 0;
                 _commandStatus = HC12_CMD_STATUS_FAILED;
                 retVal = NO_MORE_DATA;
@@ -835,20 +836,14 @@ fprintf(stderr, "NO match!\n");
                 break;
             default:
                 _commandStatus = HC12_CMD_STATUS_UNKNOWN;
-                retVal = NO_MORE_DATA;
-//                retVal = TRY_MORE_DATA;
+//                retVal = NO_MORE_DATA;
+                retVal = TRY_MORE_DATA;
                 break;
         }
 
 
         if( retVal == NO_MORE_DATA && _commandStatus >= 0 )
         {
-//            do
-//            {
-//                retVal = _connection->readBuffer( _ioBuffer,
-//                          IO_BUFFER_SIZE-1 );
-//            } while( retVal == E_BUFSPACE || retVal > 0 );
-    
             _currentCommand = HC12_CMD_CODE_NULL;
             retVal = NO_MORE_DATA;
         }
@@ -856,11 +851,12 @@ fprintf(stderr, "NO match!\n");
         {
             if( _commandStatus < 0 )
             {
-//                do
-//                {
-//                    retVal = _connection->readBuffer( _ioBuffer,
-//                              IO_BUFFER_SIZE-1 );
-//                } while( retVal == E_BUFSPACE || retVal > 0 );
+// look here if application hangs
+                while( retVal == E_BUFSPACE || retVal > 0 )
+                {
+                    retVal = _connection->readBuffer( _ioBuffer,
+                              IO_BUFFER_SIZE-1 );
+                };
 
                 _currentCommand = HC12_CMD_CODE_NULL;
                 retVal = NO_MORE_DATA;
