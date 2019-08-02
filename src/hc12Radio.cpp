@@ -59,7 +59,7 @@ void dumpSerialParam( struct _hc12_serial_param *pData )
         fprintf(stderr, "---------------\n");
         fprintf(stderr, "device ...: %s\n", pData->device );
         fprintf(stderr, "dev_fd ...: %d\n", pData->dev_fd );
-        fprintf(stderr, "baud .....: %d\n", pData->baud );
+        fprintf(stderr, "baud .....: %u\n", pData->baud );
         fprintf(stderr, "databit ..: %d\n", pData->databit );
         fprintf(stderr, "parity ...: %c\n", pData->parity );
         fprintf(stderr, "stopbits .: %d\n", pData->stopbits );
@@ -474,7 +474,7 @@ int hc12Radio::getResponse( void )
 
 int hc12Radio::parseResponse( void )
 {
-    static int baud;
+    static uint32_t baud;
     static int channel;
     static int powerDB;
     static int ttMode;

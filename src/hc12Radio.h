@@ -208,8 +208,8 @@ using namespace std;
 #define HC12_RSP_UPDATE            ""
 #define HC12_ARGS_RSP_UPDATE        0
 #define HC12_CMD_CODE_SET_BAUD     24
-#define HC12_CMD_SET_BAUD          "AT+B%d\n"
-#define HC12_RSP_SET_BAUD          "OK+B%d"
+#define HC12_CMD_SET_BAUD          "AT+B%u\n"
+#define HC12_RSP_SET_BAUD          "OK+B%u"
 #define HC12_ARGS_RSP_SET_BAUD      1
 #define HC12_CMD_CODE_SET_CHANNEL  25
 #define HC12_CMD_SET_CHANNEL       "AT+C%03d\n"
@@ -233,7 +233,7 @@ using namespace std;
 #define HC12_ARGS_RSP_SET_SERIAL    3
 #define HC12_CMD_CODE_GET_BAUD     30
 #define HC12_CMD_GET_BAUD          "AT+RB\n"
-#define HC12_RSP_GET_BAUD          "OK+B%d"
+#define HC12_RSP_GET_BAUD          "OK+B%u"
 #define HC12_ARGS_RSP_GET_BAUD      1
 #define HC12_CMD_CODE_GET_CHANNEL  31
 #define HC12_CMD_GET_CHANNEL       "AT+RC\n"
@@ -286,7 +286,7 @@ struct _hc12_serial_param {
     bool            isHWPort;
     #endif // defined(ARDUINO)
 #endif // defined(__linux__)
-unsigned int baud;
+uint32_t baud;
 unsigned char databit;
 unsigned char parity;
 unsigned char stopbits;

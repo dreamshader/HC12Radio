@@ -253,7 +253,7 @@ void get_arguments ( int argc, char **argv, struct _hc12_serial_param *ctl_param
                 }
                 break;
             case 'b':
-                ctl_param->baud = atoi(optarg);
+                ctl_param->baud = atol(optarg);
                 break;
             case 'd':
                 ctl_param->databit =atoi(optarg);
