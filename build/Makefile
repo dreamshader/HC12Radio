@@ -41,11 +41,12 @@ CXXFLAGS = -Wall -DHC12SERIAL
 CXXLIBSOFLAGS = -fPIC -shared 
 #
 SOURCEDIR = ../src
+EXAMPLEDIR = ../examples
 LIBSRC = $(SOURCEDIR)/hc12Radio.cpp
 LIBINC = $(SOURCEDIR)/hc12Radio.h
-EXAMPLSRC = $(SOURCEDIR)/hc12Test.cpp
+EXAMPLSRC = $(EXAMPLEDIR)/hc12Test.cpp
 EXAMPLNAME = hc12Test
-EXAMPLFLAGS = -I. -L ../build -l hc12Radio -l serialConnection
+EXAMPLFLAGS = -I$(SOURCEDIR) -L ../build -l hc12Radio -l serialConnection
 LIBOBJ = hc12Radio.o
 SOLIBNAME = libhc12Radio.so
 #

@@ -1239,7 +1239,7 @@ doLog(DEBUG_LEVEL_1);
     _moduleParam.serialParam.databit = HC12_DEFAULT_DATABIT;
     _moduleParam.serialParam.parity = HC12_DEFAULT_PARITY;
     _moduleParam.serialParam.stopbits = HC12_DEFAULT_STOPBITS;
-    _moduleParam.serialParam.handshake = HC12_DEFAULT_HANDSHAKE;
+//    _moduleParam.serialParam.handshake = HC12_DEFAULT_HANDSHAKE;
 
     _moduleParam.hwInfo.major = HC12_DEFAULT_V_MAJOR;
     _moduleParam.hwInfo.minor = HC12_DEFAULT_V_MINOR;
@@ -1321,7 +1321,7 @@ void hc12Radio::reset( void )
     _moduleParam.serialParam.databit = HC12_DEFAULT_DATABIT;
     _moduleParam.serialParam.parity = HC12_DEFAULT_PARITY;
     _moduleParam.serialParam.stopbits = HC12_DEFAULT_STOPBITS;
-    _moduleParam.serialParam.handshake = HC12_DEFAULT_HANDSHAKE;
+//    _moduleParam.serialParam.handshake = HC12_DEFAULT_HANDSHAKE;
 
 }
 
